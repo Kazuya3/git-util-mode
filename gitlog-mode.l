@@ -159,6 +159,7 @@
 	(switch-to-buffer-other-window "Git log")
 	(setup-temp-buffer (selected-buffer))
 	(switch-to-buffer-other-window "Git description")
+	(setup-temp-buffer (selected-buffer))
 	(make-local-variable 'mode-line-format)
 	(_gitlog-setup-mode-line)
 	(set-window-with-buffer-name "Git log")
