@@ -32,7 +32,10 @@
   (define-key *gitlog-mode-map* #\SPC '_gitlog-mark-toggle)
   (define-key *gitlog-mode-map* #\n 'gitlog-show-next)
   (define-key *gitlog-mode-map* #\p 'gitlog-show-prev)
+  (define-key *gitlog-mode-map* #\c '_gitlog-checkout)
   )
+
+(defvar *gitlog-git-binary-path* "C:/Program Files/Git/bin/git.exe")
 
 (defun set-window-with-buffer-name (_buffer-name)
   (set-window (get-buffer-window (find-buffer _buffer-name)))
@@ -148,6 +151,19 @@
   "@brief	ウィンドウのステータス表示形式を変更。"
   (make-local-variable 'mode-line-format)
   (setq mode-line-format (format nil "%b"))
+  )
+
+(defun _gitlog-checkout()
+  (interactive)
+  "カーソルがある行でチェックアウトする。"
+  (let* ((commit (_gitlog-current-commit))
+		 (sha-1 (git-commit-object-sha-1 commit))
+		 )
+	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
+	  (call-process (format nil "~A checkout ~A ~A"
+							*gitlog-git-binary-path* sha-1 gitlog-target))
+	  )
+	)
   )
 
 (defun gitlog-mode (&optional logfile)
