@@ -1,3 +1,17 @@
+;;; -*- Mode: Lisp; Package: EDITOR -*-
+;;; git で、特定のファイルのログに関する機能を提供する。
+;;; 
+;;; ■初期設定
+;;; .bashrc に同梱の gitlogtool.sh をエイリアスとして設定する。
+;;; 
+;;; 例）
+;;; alias gitlogtool='gitlogtool.sh'（フルパス）
+;;; 
+;;; ■使い方
+;;; 上記のような設定をした場合、実行コマンドは以下のようになる。
+;;; gitlogtool file-name
+
+
 (provide "gitlog")
 (in-package "editor")
 (export '(gitlog-mode))
