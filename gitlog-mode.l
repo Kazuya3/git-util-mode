@@ -1,12 +1,14 @@
 ;;; -*- Mode: Lisp; Package: EDITOR -*-
 ;;; git で、特定のファイルのログに関する機能を提供する。
-;;; 
+;;;
+;;; ベースは Netinstaller の apps.l
+;;;
 ;;; ■初期設定
 ;;; .bashrc に同梱の gitlogtool.sh をエイリアスとして設定する。
-;;; 
+;;;
 ;;; 例）
 ;;; alias gitlogtool='gitlogtool.sh'（フルパス）
-;;; 
+;;;
 ;;; ■使い方
 ;;; 上記のような設定をした場合、実行コマンドは以下のようになる。
 ;;; gitlogtool file-name
@@ -14,8 +16,21 @@
 
 (provide "gitlog")
 (in-package "editor")
+
+
+; -----------------------------------------------------------------------------
+; エキスポート
+; -----------------------------------------------------------------------------
+; 変数
+(export '(*gitlog-git-path*))
+
+; 関数
 (export '(gitlog-mode))
 
+
+; -----------------------------------------------------------------------------
+; 構造体定義
+; -----------------------------------------------------------------------------
 (defstruct git-commit-object
   (sha-1	nil)
   (author	nil)
@@ -25,6 +40,11 @@
   (checked	nil)
   )
 
+
+; -----------------------------------------------------------------------------
+; 変数定義
+; -----------------------------------------------------------------------------
+(defvar *gitlog-git-path* nil)
 (defvar *gitlog-mode-map* nil)
 (unless *gitlog-mode-map*
   (setf *gitlog-mode-map* (make-sparse-keymap))
@@ -37,6 +57,10 @@
 
 (defvar *gitlog-git-binary-path* "C:/Program Files/Git/bin/git.exe")
 
+
+; -----------------------------------------------------------------------------
+; 関数定義
+; -----------------------------------------------------------------------------
 (defun set-window-with-buffer-name (_buffer-name)
   (set-window (get-buffer-window (find-buffer _buffer-name)))
   )
@@ -171,9 +195,11 @@
 "
   (interactive)
   (let ((logbuffer (selected-buffer))
-;; 		(logfile (get-buffer-file-name))
 		)
+
+	; 開発用にログファイルを指定したい場合は以下をコメントアウトする。
 ;; 	(setf logfile "D:/myRoot/opt/xyzzy/site-lisp/siteinitlog.gitlog")
+
 	(when (find-pseudo-frame "Git")
 	  (select-pseudo-frame (find-pseudo-frame "Git"))
 	  (delete-pseudo-frame)
@@ -181,17 +207,25 @@
 	(new-pseudo-frame "Git")
 	(split-window)
 	(split-window-vertically 80)
+
+	; 操作法ペイン初期化
 	(switch-to-buffer "Git operating")
 	(setup-temp-buffer (selected-buffer))
 	(_gitlog-setup-mode-line)
 	(insert-file (merge-pathnames "gitlog-mode.readme" *etc-path*))
 	(setf buffer-read-only t)
+
+	; ログペイン作成
 	(switch-to-buffer-other-window "Git log")
 	(setup-temp-buffer (selected-buffer))
+
+	; デスクリプションペイン初期化
 	(switch-to-buffer-other-window "Git description")
 	(setup-temp-buffer (selected-buffer))
 	(make-local-variable 'mode-line-format)
 	(_gitlog-setup-mode-line)
+
+	; ログペイン初期化
 	(set-window-with-buffer-name "Git log")
 	(setup-temp-buffer (selected-buffer))
 	(setf buffer-read-only t)
@@ -209,12 +243,7 @@
 							*window-flag-just-inverse* t)
 	(set-buffer-fold-width nil)
 	(_gitlog-setup-mode-line)
-;;   (make-local-variable 'title-bar-format)
-;;   (make-local-variable 'app-data)
-;;   (apps-mode-line)
 	(use-keymap *gitlog-mode-map*)
-;;   (run-hooks '*ni-apps-mode-hook*)
-
 	(make-local-variable 'gitlog-exec-directory)
 	(make-local-variable 'gitlog-target)
 	(make-local-variable 'git-commit-objects)
@@ -284,6 +313,7 @@
 	)
   )
 
+; エントリポイント
 (when si:*command-line-args*
   (let (error-message
 		(logfile (nth 0 si:*command-line-args*))
