@@ -97,7 +97,8 @@
 				  "Target what is selected is no more than one.")
 				)
 			  (setf command
-					(format nil "C:/Program Files/Git/bin/git.exe difftool ~A ~A ~A"
+					(format nil "~A difftool ~A ~A ~A"
+							*gitlog-git-binary-path*
 							(git-commit-object-sha-1 (nth 0 checkeds))
 							(git-commit-object-sha-1 (nth 1 checkeds))
 							gitlog-target)
