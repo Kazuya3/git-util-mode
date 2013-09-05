@@ -61,6 +61,18 @@
 ; -----------------------------------------------------------------------------
 ; 関数定義
 ; -----------------------------------------------------------------------------
+(defun _set-log-keymap (keymap)
+  "@brief	log 用のキーマップ設定"
+  (let ((keymap (make-sparse-keymap)))
+	(define-key keymap #\RET '_gitlog-compare-commits)
+	(define-key keymap #\SPC '_gitlog-mark-toggle)
+	(define-key keymap #\n 'gitlog-show-next)
+	(define-key keymap #\p 'gitlog-show-prev)
+	(define-key keymap #\c '_gitlog-checkout)
+	keymap
+	)
+  )
+
 (defun set-window-with-buffer-name (_buffer-name)
   "@brief	set-window をバッファ名で行う。"
   (set-window (get-buffer-window (find-buffer _buffer-name)))
@@ -277,14 +289,16 @@
 		)
 	  (setf gitlog-target-file-name (read-line file nil nil))
 	  (let (line splited sha1 author mail date description)
-		(while t
+		(loop
 		  (setf line (read-line file nil nil))
-		  (if (not line)
-			  (return)
+		  (cond
+		   ((not line)
+			(return)
 			)
-		  (if (not (string-match "^commit" line))
-			  (return)
+		   ((not (string-match "^commit" line))
+			(return)
 			)
+		   )
 		  (setf sha1 (nth 1 (split-string line " ")))
 		  (setf line (read-line file nil nil))
 		  (setf splited (split-string line " "))
@@ -293,7 +307,7 @@
 		  (setf line (read-line file nil nil))
 		  (setf date (substring line 8))
 		  (read-line file nil nil)
-		  (while t
+		  (loop
 			(setf line (read-line file nil nil))
 			(if (= 0 (length line))
 				(return)
