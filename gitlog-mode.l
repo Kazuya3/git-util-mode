@@ -248,7 +248,7 @@
 	(_gitlog-setup-mode-line)
 	(use-keymap *gitlog-mode-map*)
 	(make-local-variable 'gitlog-exec-directory)
-	(make-local-variable 'gitlog-target)
+	(make-local-variable 'gitlog-target-file-name)
 	(make-local-variable 'git-commit-objects)
 	(setf git-commit-objects (list))
 	(let (notsjis)
@@ -275,7 +275,7 @@
 											":"
 											(substring gitlog-exec-directory 2)))
 		)
-	  (setf gitlog-target (read-line file nil nil))
+	  (setf gitlog-target-file-name (read-line file nil nil))
 	  (let (line splited sha1 author mail date description)
 		(while t
 		  (setf line (read-line file nil nil))
