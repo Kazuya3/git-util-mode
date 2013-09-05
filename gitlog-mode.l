@@ -62,10 +62,12 @@
 ; 関数定義
 ; -----------------------------------------------------------------------------
 (defun set-window-with-buffer-name (_buffer-name)
+  "@brief	set-window をバッファ名で行う。"
   (set-window (get-buffer-window (find-buffer _buffer-name)))
   )
 
 (defun _gitlog-mark-toggle ()
+  "@brief	ログペインのコミットのマークをトグルする。"
   (interactive)
   (let ((commit (_gitlog-current-commit)))
 	(setf (git-commit-object-checked commit) (if (git-commit-object-checked commit) nil t))
