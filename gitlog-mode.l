@@ -22,7 +22,7 @@
 ; エキスポート
 ; -----------------------------------------------------------------------------
 ; 変数
-(export '(*gitlog-git-path*))
+(export '(*gitlog-git-executable-path*))
 
 ; 関数
 (export '(gitlog-mode))
@@ -55,7 +55,7 @@
   (define-key *gitlog-mode-map* #\c '_gitlog-checkout)
   )
 
-(defvar *gitlog-git-binary-path* "C:/Program Files/Git/bin/git.exe")
+(defvar *gitlog-git-executable-path* "C:/Program Files/Git/bin/git.exe")
 
 
 ; -----------------------------------------------------------------------------
@@ -98,7 +98,7 @@
 				)
 			  (setf command
 					(format nil "~A difftool ~A ~A ~A"
-							*gitlog-git-binary-path*
+							*gitlog-git-executable-path*
 							(git-commit-object-sha-1 (nth 0 checkeds))
 							(git-commit-object-sha-1 (nth 1 checkeds))
 							gitlog-target)
@@ -186,7 +186,7 @@
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
-							*gitlog-git-binary-path* sha-1 gitlog-target))
+							*gitlog-git-executable-path* sha-1 gitlog-target))
 	  )
 	)
   )
