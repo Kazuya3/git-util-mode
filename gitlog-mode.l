@@ -193,15 +193,15 @@
 	)
   )
 
-(defun gitlog-mode (&optional logfile)
-  "@param logfile	ログファイル名。フルパスである必要がある。
+(defun gitlog-mode (&optional target-file-name)
+  "@param target-file-name	ログファイル名。フルパスである必要がある。
 "
   (interactive)
   (let ((logbuffer (selected-buffer))
 		)
 
 	; 開発用にログファイルを指定したい場合は以下をコメントアウトする。
-;; 	(setf logfile "D:/myRoot/opt/xyzzy/site-lisp/siteinitlog.gitlog")
+;; 	(setf target-file-name "D:/myRoot/opt/xyzzy/site-lisp/siteinitlog.gitlog")
 
 	(when (find-pseudo-frame "Git")
 	  (select-pseudo-frame (find-pseudo-frame "Git"))
@@ -252,11 +252,11 @@
 	(make-local-variable 'git-commit-objects)
 	(setf git-commit-objects (list))
 	(let (notsjis)
-	  (with-open-file (file logfile :encoding :text)
+	  (with-open-file (file target-file-name :encoding :text)
 		(setf notsjis (not (equal *encoding-sjis* (detect-char-encoding file))))
 		)
 	  (when notsjis
-		(find-file logfile)
+		(find-file target-file-name)
 		(set-buffer-fileio-encoding *encoding-sjis*)
 		(insert " ")
 		(save-buffer)
@@ -265,7 +265,7 @@
 		(delete-buffer (selected-buffer))
 		)
 	  )
-	(with-open-file (file logfile :encoding :text)
+	(with-open-file (file target-file-name :encoding :text)
 	  (setf gitlog-exec-directory (read-line file nil nil))
 	  ; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 	  ; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
@@ -319,16 +319,16 @@
 ; エントリポイント
 (when si:*command-line-args*
   (let (error-message
-		(logfile (nth 0 si:*command-line-args*))
+		(target-file-name (nth 0 si:*command-line-args*))
 		)
 	(setf error-message
 		  (block top
-			(when (string-match ".gitlog$" logfile)
-			  (unless (file-exist-p logfile)
+			(when (string-match ".gitlog$" target-file-name)
+			  (unless (file-exist-p target-file-name)
 				(return-from top "Specified file is not exist")
 				)
 			  (pop si:*command-line-args*)
-			  (gitlog-mode logfile)
+			  (gitlog-mode target-file-name)
 			  )
 			nil
 			)
