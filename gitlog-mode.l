@@ -237,7 +237,6 @@
 	; デスクリプションペイン初期化
 	(switch-to-buffer-other-window "Git description")
 	(setup-temp-buffer (selected-buffer))
-	(make-local-variable 'mode-line-format)
 	(_gitlog-setup-mode-line)
 
 	; ログペイン初期化
