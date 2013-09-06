@@ -84,6 +84,50 @@
 	)
   )
 
+(defun _gitlog-parse-log (objects log-file)
+  "log の結果をパースする。"
+  ; target-file-name って使われていないっぽい。
+  ; しばらく様子を見て、必要ないようなら消す。
+  (let (target-file-name line splited sha1 author mail date description)
+	(setf target-file-name (read-line log-file nil nil))
+	(loop
+	  (setf line (read-line log-file nil nil))
+	  (cond
+	   ((not line)
+		(return)
+		)
+	   ((not (string-match "^commit" line))
+		(return)
+		)
+	   )
+	  (setf sha1 (nth 1 (split-string line " ")))
+	  (setf line (read-line log-file nil nil))
+	  (setf splited (split-string line " "))
+	  (setf author (nth 1 splited))
+	  (setf mail (nth 2 splited))
+	  (setf line (read-line log-file nil nil))
+	  (setf date (substring line 8))
+	  (read-line log-file nil nil)
+	  (loop
+		(setf line (read-line log-file nil nil))
+		(if (= 0 (length line))
+			(return)
+		  )
+		(setf description (concat description line "\n"))
+		)
+	  (push (make-git-commit-object
+			 :sha-1 sha1
+			 :author author
+			 :mail mail
+			 :date date
+			 :description description)
+			objects)
+	  (setf description "")
+	  )
+	(reverse objects)
+	)
+  )
+
 (defun _set-log-keymap (keymap)
   "@brief	log 用のキーマップ設定"
   (let ((keymap (make-sparse-keymap)))
@@ -223,15 +267,15 @@
 	)
   )
 
-(defun gitlog-mode (&optional target-file-name)
-  "@param target-file-name	ログファイル名。フルパスである必要がある。
+(defun gitlog-mode (&optional log-file-name)
+  "@param log-file-name	ログファイル名。フルパスである必要がある。
 "
   (interactive)
   (let ((logbuffer (selected-buffer))
 		)
 
 	; 開発用にログファイルを指定したい場合は以下をコメントアウトする。
-;; 	(setf target-file-name "D:/myRoot/opt/xyzzy/site-lisp/siteinitlog.gitlog")
+;; 	(setf log-file-name "D:/myRoot/opt/xyzzy/site-lisp/siteinitlog.gitlog")
 
 	(when (find-pseudo-frame "Git")
 	  (select-pseudo-frame (find-pseudo-frame "Git"))
@@ -281,56 +325,26 @@
 	(make-local-variable 'git-commit-objects)
 	(setf git-commit-objects (list))
 
-	; target-file-name が sjis じゃない場合に、sjis に変換する。
-	(convert-char-code target-file-name *encoding-sjis*)
+	; log-file-name が sjis じゃない場合に、sjis に変換する。
+	(convert-char-code log-file-name *encoding-sjis*)
 
-	(with-open-file (file target-file-name :encoding :text)
-	  (setf gitlog-exec-directory (read-line file nil nil))
-	  ; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
-	  ; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
-	  ; 変換するようにした。
-	  (when (char= #\/ (char gitlog-exec-directory 0))
-		(setf gitlog-exec-directory (concat (substring gitlog-exec-directory 1 2)
-											":"
-											(substring gitlog-exec-directory 2)))
-		)
-	  (setf gitlog-target-file-name (read-line file nil nil))
-	  (let (line splited sha1 author mail date description)
-		(loop
-		  (setf line (read-line file nil nil))
-		  (cond
-		   ((not line)
-			(return)
-			)
-		   ((not (string-match "^commit" line))
-			(return)
-			)
-		   )
-		  (setf sha1 (nth 1 (split-string line " ")))
-		  (setf line (read-line file nil nil))
-		  (setf splited (split-string line " "))
-		  (setf author (nth 1 splited))
-		  (setf mail (nth 2 splited))
-		  (setf line (read-line file nil nil))
-		  (setf date (substring line 8))
-		  (read-line file nil nil)
-		  (loop
-			(setf line (read-line file nil nil))
-			(if (= 0 (length line))
-				(return)
-			  )
-			(setf description (concat description line "\n"))
-			)
-		  (push (make-git-commit-object
-				 :sha-1 sha1
-				 :author author
-				 :mail mail
-				 :date date
-				 :description description)
-				git-commit-objects)
-		  (setf description "")
+	(let (file mode)
+	  (with-open-file (file log-file-name :encoding :text)
+		(setf mode (read-line file nil nil))
+		(setf gitlog-exec-directory (read-line file nil nil))
+		; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
+		; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
+		; 変換するようにした。
+		(when (char= #\/ (char gitlog-exec-directory 0))
+		  (setf gitlog-exec-directory (concat (substring gitlog-exec-directory 1 2)
+											  ":"
+											  (substring gitlog-exec-directory 2)))
 		  )
-		(setf git-commit-objects (reverse git-commit-objects))
+		(cond
+		 ((string= "log" mode)
+		  (setf git-commit-objects (_gitlog-parse-log git-commit-objects file))
+		  )
+		 )
 		)
 	  )
 	(_git-update-log git-commit-objects)
@@ -340,16 +354,16 @@
 ; エントリポイント
 (when si:*command-line-args*
   (let (error-message
-		(target-file-name (nth 0 si:*command-line-args*))
+		(log-file-name (nth 0 si:*command-line-args*))
 		)
 	(setf error-message
 		  (block top
-			(when (string-match ".gitlog$" target-file-name)
-			  (unless (file-exist-p target-file-name)
+			(when (string-match ".gitlog$" log-file-name)
+			  (unless (file-exist-p log-file-name)
 				(return-from top "Specified file is not exist")
 				)
 			  (pop si:*command-line-args*)
-			  (gitlog-mode target-file-name)
+			  (gitlog-mode log-file-name)
 			  )
 			nil
 			)
