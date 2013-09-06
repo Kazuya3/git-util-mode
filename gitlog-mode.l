@@ -61,6 +61,29 @@
 ; -----------------------------------------------------------------------------
 ; 関数定義
 ; -----------------------------------------------------------------------------
+(defun set-window-with-buffer-name (_buffer-name)
+  "@brief	set-window をバッファ名で行う。"
+  (set-window (get-buffer-window (find-buffer _buffer-name)))
+  )
+
+(defun convert-char-code (file-name encode)
+  "@brief	指定したファイルのエンコードを指定したエンコードに変換する。"
+  (let (different)
+	(with-open-file (file file-name :encoding :text)
+	  (setf different (not (equal encode (detect-char-encoding file))))
+	  )
+	(when different
+	  (find-file file-name)
+	  (set-buffer-fileio-encoding encode)
+	  (insert " ")
+	  (save-buffer)
+	  (delete-backward-char)
+	  (save-buffer)
+	  (delete-buffer (selected-buffer))
+	  )
+	)
+  )
+
 (defun _set-log-keymap (keymap)
   "@brief	log 用のキーマップ設定"
   (let ((keymap (make-sparse-keymap)))
@@ -71,11 +94,6 @@
 	(define-key keymap #\c '_gitlog-checkout)
 	keymap
 	)
-  )
-
-(defun set-window-with-buffer-name (_buffer-name)
-  "@brief	set-window をバッファ名で行う。"
-  (set-window (get-buffer-window (find-buffer _buffer-name)))
   )
 
 (defun _gitlog-mark-toggle ()
@@ -262,20 +280,10 @@
 	(make-local-variable 'gitlog-target-file-name)
 	(make-local-variable 'git-commit-objects)
 	(setf git-commit-objects (list))
-	(let (notsjis)
-	  (with-open-file (file target-file-name :encoding :text)
-		(setf notsjis (not (equal *encoding-sjis* (detect-char-encoding file))))
-		)
-	  (when notsjis
-		(find-file target-file-name)
-		(set-buffer-fileio-encoding *encoding-sjis*)
-		(insert " ")
-		(save-buffer)
-		(delete-backward-char)
-		(save-buffer)
-		(delete-buffer (selected-buffer))
-		)
-	  )
+
+	; target-file-name が sjis じゃない場合に、sjis に変換する。
+	(convert-char-code target-file-name *encoding-sjis*)
+
 	(with-open-file (file target-file-name :encoding :text)
 	  (setf gitlog-exec-directory (read-line file nil nil))
 	  ; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
