@@ -212,7 +212,7 @@
   (let ((commit (_gitlog-current-commit)))
 	(setf (git-commit-object-checked commit) (if (git-commit-object-checked commit) nil t))
 	)
-  (_git-update-log git-commit-objects)
+  (_gitlog-update-logpane git-commit-objects)
   )
 
 (defun _gitlog-compare-commits ()
@@ -258,7 +258,7 @@
 	)
   )
 
-(defun _git-update-log (commit-objects)
+(defun _gitlog-update-logpane (commit-objects)
   "@brief	ログペイン更新。"
   (set-window-with-buffer-name "Git log")
   (setf buffer-read-only nil)
@@ -414,7 +414,7 @@
 		  )
 		)
 	  )
-	(_git-update-log git-commit-objects)
+	(_gitlog-update-logpane git-commit-objects)
 	)
   )
 
