@@ -212,7 +212,7 @@
   (let ((commit (_gitlog-current-commit)))
 	(setf (git-commit-object-checked commit) (if (git-commit-object-checked commit) nil t))
 	)
-  (_gitlog-update-logpane git-commit-objects)
+  (_gitlog-update-logpane gitlog-commit-objects)
   )
 
 (defun _gitlog-compare-commits ()
@@ -225,7 +225,7 @@
 				  (checkeds (list))
 				  command
 				  )
-			  (dolist (commit git-commit-objects)
+			  (dolist (commit gitlog-commit-objects)
 				(when (git-commit-object-checked commit)
 				  (push commit checkeds)
 				  (when (< 2 (incf checked-num))
@@ -273,7 +273,7 @@
 	  )
 	(delete-backward-char)
 	(setf buffer-read-only t)
-	(if (<= cursor-position (length git-commit-objects))
+	(if (<= cursor-position (length gitlog-commit-objects))
 		(goto-line cursor-position)
 	  )
 	)
@@ -281,7 +281,7 @@
 
 (defun _gitlog-current-commit ()
   "@brief	カーソルがある行に対応したコミットオブジェクトを取得。"
-  (nth (- (current-line-number) 1) git-commit-objects)
+  (nth (- (current-line-number) 1) gitlog-commit-objects)
   )
 
 (defun _gitlog-detail-open ()
@@ -388,8 +388,7 @@
 	(use-keymap *gitlog-mode-map*)
 	(make-local-variable 'gitlog-exec-directory)
 	(make-local-variable 'gitlog-target-file-name)
-	(make-local-variable 'git-commit-objects)
-	(setf git-commit-objects (list))
+	(make-local-variable 'gitlog-commit-objects)
 
 	; log-file-name が sjis じゃない場合に、sjis に変換する。
 	(convert-char-code log-file-name *encoding-sjis*)
@@ -410,11 +409,11 @@
 						 ("reflog" . _gitlog-parse-reflog)))
 			  parser)
 		  (setf parser (cdr (assoc mode parsers :test 'string=)))
-		  (setf git-commit-objects (funcall parser file))
+		  (setf gitlog-commit-objects (funcall parser file))
 		  )
 		)
 	  )
-	(_gitlog-update-logpane git-commit-objects)
+	(_gitlog-update-logpane gitlog-commit-objects)
 	)
   )
 
