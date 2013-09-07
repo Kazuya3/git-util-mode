@@ -33,6 +33,7 @@
 ; -----------------------------------------------------------------------------
 (defstruct git-commit-object
   (sha-1	nil)
+  (reflog-pointer nil)
   (author	nil)
   (mail		nil)
   (date		nil)
@@ -146,7 +147,7 @@
 		)
 	(setf target-file-name (read-line log-file nil nil))
 	(loop
-	  (let (line splited sha1 pointer author mail date description)
+	  (let (line splited sha1 reflog-pointer author mail date description)
 		(setf line (read-line log-file nil nil))
 		(cond
 		 ((not line)
@@ -160,7 +161,7 @@
 		; 二行目
 		(setf line (read-line log-file nil nil))
 		(setf splited (split-string line " "))
-		(setf pointer (nth 1 splited))
+		(setf reflog-pointer (nth 1 splited))
 		; 三行目 無視
 		(read-line log-file nil nil)
 		; 四行目
@@ -183,6 +184,7 @@
 		  )
 		(push (make-git-commit-object
 			   :sha-1 sha1
+			   :reflog-pointer reflog-pointer
 			   :author author
 			   :mail mail
 			   :date date
@@ -258,18 +260,42 @@
 	)
   )
 
+(defun _gitlog-create-log-text (object)
+  "
+@brief	logモードにおいて、
+		コミットオブジェクトからログペインに表示するテキストを作成する。
+@param object	コミットオブジェクト"
+  (format nil "[~:[ ~;*~]] ~A	~A~%"
+		  (git-commit-object-checked object)
+		  (git-commit-object-date object)
+		  (git-commit-object-author object))
+  )
+
+(defun _gitlog-create-reflog-text (object)
+  "
+@brief	reflogモードにおいて、
+		コミットオブジェクトからログペインに表示するテキストを作成する。
+@param object	コミットオブジェクト"
+  (format nil "[~:[ ~;*~]] ~A	~A	~A~%"
+		  (git-commit-object-checked object)
+		  (git-commit-object-reflog-pointer object)
+		  (git-commit-object-date object)
+		  (git-commit-object-author object))
+  )
+
 (defun _gitlog-update-logpane (commit-objects)
   "@brief	ログペイン更新。"
   (set-window-with-buffer-name "Git log")
   (setf buffer-read-only nil)
-  (let ((cursor-position (current-line-number)))
+  (let ((cursor-position (current-line-number))
+		(text-creators '(("log" . _gitlog-create-log-text)
+						("reflog" . _gitlog-create-reflog-text)))
+		text-creator
+		)
+	(setf text-creator (cdr (assoc gitlog-mode text-creators :test 'string=)))
 	(erase-buffer (selected-buffer))
 	(dolist (object commit-objects)
-	  (insert (format nil "[~:[ ~;*~]] ~A	~A~%"
-					  (git-commit-object-checked object)
-					  (git-commit-object-date object)
-					  (git-commit-object-author object))
-			  )
+	  (insert (funcall text-creator object))
 	  )
 	(delete-backward-char)
 	(setf buffer-read-only t)
