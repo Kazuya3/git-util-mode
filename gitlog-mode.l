@@ -133,6 +133,67 @@
 	)
   )
 
+(defun _gitlog-parse-reflog (log-file)
+  "
+@brief	reflog の結果をバースする。
+@param log-file	ログファイルのストリーム
+@return	log-file をパースして得たコミットオブジェクトのリスト
+"
+  ; target-file-name って使われていないっぽい。
+  ; しばらく様子を見て、必要ないようなら消す。
+  (let ((objects (list))
+		target-file-name
+		)
+	(setf target-file-name (read-line log-file nil nil))
+	(loop
+	  (let (line splited sha1 pointer author mail date description)
+		(setf line (read-line log-file nil nil))
+		(cond
+		 ((not line)
+		  (return)
+		  )
+		 ((not (string-match "^commit" line))
+		  (return)
+		  )
+		 )
+		(setf sha1 (nth 1 (split-string line " ")))
+		; 二行目
+		(setf line (read-line log-file nil nil))
+		(setf splited (split-string line " "))
+		(setf pointer (nth 1 splited))
+		; 三行目 無視
+		(read-line log-file nil nil)
+		; 四行目
+		(setf line (read-line log-file nil nil))
+		(setf splited (split-string line " "))
+		(setf author (nth 1 splited))
+		(setf mail (nth 2 splited))
+		; 五行目
+		(setf line (read-line log-file nil nil))
+		(setf splited (split-string line " "))
+		(setf date (substring line 8))
+		; 六行目
+		(read-line log-file nil nil)
+		(loop
+		  (setf line (read-line log-file nil nil))
+		  (if (= 0 (length line))
+			  (return)
+			)
+		  (setf description (concat description line "\n"))
+		  )
+		(push (make-git-commit-object
+			   :sha-1 sha1
+			   :author author
+			   :mail mail
+			   :date date
+			   :description description)
+			  objects)
+		)
+	  )
+	(reverse objects)
+	)
+  )
+
 (defun _set-log-keymap (keymap)
   "@brief	log 用のキーマップ設定"
   (let ((keymap (make-sparse-keymap)))
@@ -345,11 +406,12 @@
 											  ":"
 											  (substring gitlog-exec-directory 2)))
 		  )
-		(cond
-		 ((string= "log" mode)
-		  (setf git-commit-objects (_gitlog-parse-log file))
+		(let ((parsers '(("log" . _gitlog-parse-log)
+						 ("reflog" . _gitlog-parse-reflog)))
+			  parser)
+		  (setf parser (cdr (assoc mode parsers :test 'string=)))
+		  (setf git-commit-objects (funcall parser file))
 		  )
-		 )
 		)
 	  )
 	(_git-update-log git-commit-objects)
