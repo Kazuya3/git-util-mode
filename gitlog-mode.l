@@ -84,11 +84,16 @@
 	)
   )
 
-(defun _gitlog-parse-log (objects log-file)
-  "log の結果をパースする。"
+(defun _gitlog-parse-log (log-file)
+  "
+@brief	log の結果をパースする。
+@param log-file	ログファイルのストリーム
+@return	log-file をパースして得たコミットオブジェクトのリスト
+"
   ; target-file-name って使われていないっぽい。
   ; しばらく様子を見て、必要ないようなら消す。
-  (let (target-file-name line splited sha1 author mail date description)
+  (let ((objects (list))
+		target-file-name line splited sha1 author mail date description)
 	(setf target-file-name (read-line log-file nil nil))
 	(loop
 	  (setf line (read-line log-file nil nil))
@@ -342,7 +347,7 @@
 		  )
 		(cond
 		 ((string= "log" mode)
-		  (setf git-commit-objects (_gitlog-parse-log git-commit-objects file))
+		  (setf git-commit-objects (_gitlog-parse-log file))
 		  )
 		 )
 		)
