@@ -389,13 +389,14 @@
 	(make-local-variable 'gitlog-exec-directory)
 	(make-local-variable 'gitlog-target-file-name)
 	(make-local-variable 'gitlog-commit-objects)
+	(make-local-variable 'gitlog-mode)
 
 	; log-file-name が sjis じゃない場合に、sjis に変換する。
 	(convert-char-code log-file-name *encoding-sjis*)
 
-	(let (file mode)
+	(let (file)
 	  (with-open-file (file log-file-name :encoding :text)
-		(setf mode (read-line file nil nil))
+		(setf gitlog-mode (read-line file nil nil))
 		(setf gitlog-exec-directory (read-line file nil nil))
 		; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 		; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
@@ -408,7 +409,7 @@
 		(let ((parsers '(("log" . _gitlog-parse-log)
 						 ("reflog" . _gitlog-parse-reflog)))
 			  parser)
-		  (setf parser (cdr (assoc mode parsers :test 'string=)))
+		  (setf parser (cdr (assoc gitlog-mode parsers :test 'string=)))
 		  (setf gitlog-commit-objects (funcall parser file))
 		  )
 		)
