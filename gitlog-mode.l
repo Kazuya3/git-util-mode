@@ -358,6 +358,52 @@
 	)
   )
 
+(defun _gitlog-reset ()
+  "カーソルがある行が指すコミットでリセットする。"
+  (interactive)
+  (let* ((commit (_gitlog-current-commit))
+		 (reflog-pointer (git-commit-object-reflog-pointer commit))
+		 answer mode
+		 )
+	(loop
+	  (setf answer (read-string "~A でリセットします。　よろしいですか？"
+								(git-commit-object-sha-1 commit)))
+	  (cond
+	   ((string= "y")
+		(return)
+		)
+	   ((string= "n")
+		(message "リセットを中止しました。")
+		(return-from _gitlog-reset)
+		)
+	   )
+	  )
+	(loop
+	  (setf answer (read-string "モードを指定してください。 [s, h, q, ?]?"))
+	  (cond
+	   ((string= "s" answer)
+		(setf mode "soft")
+		(return)
+		)
+	   ((string= "h" answer)
+		(setf mode "hard")
+		(return)
+		)
+	   ((string= "q" answer)
+		(message "リセットを中止しました。")
+		(return-from _gitlog-reset)
+		)
+	   ((string= "?" answer)
+		(msgbox "s - soft\nh - hard\nq - quit")
+		)
+	   )
+	  )
+	(call-process (format nil "~A reset --~A ~A"
+						  *gitlog-git-executable-path* mode reflog-pointer))
+	)
+  (message "reset has done.")
+  )
+
 (defun gitlog-mode (&optional log-file-name)
   "@param log-file-name	ログファイル名。フルパスである必要がある。
 "
