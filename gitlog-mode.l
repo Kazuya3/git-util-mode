@@ -262,7 +262,7 @@
 (defun _gitlog-create-log-text (object)
   "
 @brief	logモードにおいて、
-		コミットオブジェクトからログペインに表示するテキストを作成する。
+コミットオブジェクトからログペインに表示するテキストを作成する。
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A~%"
 		  (git-commit-object-checked object)
@@ -273,7 +273,7 @@
 (defun _gitlog-create-reflog-text (object)
   "
 @brief	reflogモードにおいて、
-		コミットオブジェクトからログペインに表示するテキストを作成する。
+コミットオブジェクトからログペインに表示するテキストを作成する。
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A	~A~%"
 		  (git-commit-object-checked object)
@@ -288,7 +288,7 @@
   (setf buffer-read-only nil)
   (let ((cursor-position (current-line-number))
 		(text-creators '(("log" . _gitlog-create-log-text)
-						("reflog" . _gitlog-create-reflog-text)))
+						 ("reflog" . _gitlog-create-reflog-text)))
 		text-creator
 		)
 	(setf text-creator (cdr (assoc gitlog-mode text-creators :test 'string=)))
