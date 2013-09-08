@@ -367,20 +367,21 @@
 		 answer mode
 		 )
 	(loop
-	  (setf answer (read-string "~A でリセットします。　よろしいですか？"
-								(git-commit-object-sha-1 commit)))
+	  (setf answer (read-string
+					(format nil "~A でリセットします。[y, n]?"
+							reflog-pointer)))
 	  (cond
-	   ((string= "y")
+	   ((string= "y" answer)
 		(return)
 		)
-	   ((string= "n")
+	   ((string= "n" answer)
 		(message "リセットを中止しました。")
 		(return-from _gitlog-reset)
 		)
 	   )
 	  )
 	(loop
-	  (setf answer (read-string "モードを指定してください。 [s, h, q, ?]?"))
+	  (setf answer (read-string "モードを指定してください。[s, h, q, ?]?"))
 	  (cond
 	   ((string= "s" answer)
 		(setf mode "soft")
