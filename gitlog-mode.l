@@ -34,6 +34,7 @@
 (defstruct git-commit-object
   (sha-1	nil)
   (reflog-pointer nil)
+  (reflog-msg nil)
   (author	nil)
   (mail		nil)
   (date		nil)
@@ -135,7 +136,8 @@
 		target-file-name
 		)
 	(loop
-	  (let (line splited sha1 reflog-pointer author mail date description)
+	  (let (line splited sha1 reflog-pointer reflog-msg
+				 author mail date description)
 		(setf line (read-line log-file nil nil))
 		(cond
 		 ((not line)
@@ -150,8 +152,9 @@
 		(setf line (read-line log-file nil nil))
 		(setf splited (split-string line " "))
 		(setf reflog-pointer (nth 1 splited))
-		; 三行目 無視
-		(read-line log-file nil nil)
+		; 三行目
+		(setf line (read-line log-file nil nil))
+		(setf reflog-msg (substring line 16))
 		; 四行目
 		(setf line (read-line log-file nil nil))
 		(setf splited (split-string line " "))
@@ -173,6 +176,7 @@
 		(push (make-git-commit-object
 			   :sha-1 sha1
 			   :reflog-pointer reflog-pointer
+			   :reflog-msg reflog-msg
 			   :author author
 			   :mail mail
 			   :date date
@@ -275,11 +279,13 @@
 @brief	reflogモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
 @param object	コミットオブジェクト"
-  (format nil "[~:[ ~;*~]] ~A	~A	~A~%"
+  (format nil "[~:[ ~;*~]] ~A	~A	~A ~A~%"
 		  (git-commit-object-checked object)
 		  (git-commit-object-reflog-pointer object)
 		  (git-commit-object-date object)
-		  (git-commit-object-author object))
+		  (git-commit-object-author object)
+		  (git-commit-object-reflog-msg object)
+		  )
   )
 
 (defun _gitlog-update-logpane (commit-objects)
