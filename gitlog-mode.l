@@ -46,16 +46,6 @@
 ; 変数定義
 ; -----------------------------------------------------------------------------
 (defvar *gitlog-git-path* nil)
-(defvar *gitlog-mode-map* nil)
-(unless *gitlog-mode-map*
-  (setf *gitlog-mode-map* (make-sparse-keymap))
-  (define-key *gitlog-mode-map* #\RET '_gitlog-compare-commits)
-  (define-key *gitlog-mode-map* #\SPC '_gitlog-mark-toggle)
-  (define-key *gitlog-mode-map* #\n 'gitlog-show-next)
-  (define-key *gitlog-mode-map* #\p 'gitlog-show-prev)
-  (define-key *gitlog-mode-map* #\c '_gitlog-checkout)
-  )
-
 (defvar *gitlog-git-executable-path* "C:/Program Files/Git/bin/git.exe")
 
 
@@ -195,16 +185,27 @@
 	)
   )
 
-(defun _set-log-keymap (keymap)
-  "@brief	log 用のキーマップ設定"
+(defun _gitlog-make-general-keymap ()
+  "@brief	共通キーマップ作成"
   (let ((keymap (make-sparse-keymap)))
-	(define-key keymap #\RET '_gitlog-compare-commits)
 	(define-key keymap #\SPC '_gitlog-mark-toggle)
 	(define-key keymap #\n 'gitlog-show-next)
+	(define-key keymap #\C-n 'gitlog-show-next)
 	(define-key keymap #\p 'gitlog-show-prev)
-	(define-key keymap #\c '_gitlog-checkout)
+	(define-key keymap #\C-p 'gitlog-show-prev)
 	keymap
 	)
+  )
+
+(defun _gitlog-define-log-mode-keymap (keymap)
+  "@brief	log 用のキーマップ定義"
+  (define-key keymap #\RET '_gitlog-compare-commits)
+  (define-key keymap #\c '_gitlog-checkout)
+  )
+
+(defun _gitlog-define-reflog-mode-keymap (keymap)
+  "@brief	reflog 用のキーマップ定義"
+  (define-key keymap #\r '_gitlog-reset)
   )
 
 (defun _gitlog-mark-toggle ()
@@ -456,7 +457,7 @@
 							*window-flag-just-inverse* t)
 	(set-buffer-fold-width nil)
 	(_gitlog-setup-mode-line)
-	(use-keymap *gitlog-mode-map*)
+	(use-keymap (_gitlog-make-general-keymap))
 	(make-local-variable 'gitlog-exec-directory)
 	(make-local-variable 'gitlog-target-file-name)
 	(make-local-variable 'gitlog-commit-objects)
@@ -477,10 +478,19 @@
 											  ":"
 											  (substring gitlog-exec-directory 2)))
 		  )
-		(let ((parsers '(("log" . _gitlog-parse-log)
-						 ("reflog" . _gitlog-parse-reflog)))
-			  parser)
-		  (setf parser (cdr (assoc gitlog-mode parsers :test 'string=)))
+		(let ((mode-stuff-containers
+			   '(("log" .
+				  (_gitlog-define-log-mode-keymap _gitlog-parse-log))
+				 ("reflog" .
+				  (_gitlog-define-reflog-mode-keymap _gitlog-parse-reflog))
+				 )
+			   mode-stuffs keymap-definer parser)
+			  )
+		  (setf mode-stuffs
+				(cdr (assoc gitlog-mode mode-stuff-containers :test 'string=)))
+		  (setf keymap-definer (nth 0 mode-stuffs))
+		  (setf parser (nth 1 mode-stuffs))
+		  (funcall keymap-definer (local-keymap (selected-buffer)))
 		  (setf gitlog-commit-objects (funcall parser file))
 		  )
 		)
