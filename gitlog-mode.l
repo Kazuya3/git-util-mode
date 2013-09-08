@@ -145,7 +145,6 @@
   (let ((objects (list))
 		target-file-name
 		)
-	(setf target-file-name (read-line log-file nil nil))
 	(loop
 	  (let (line splited sha1 reflog-pointer author mail date description)
 		(setf line (read-line log-file nil nil))
