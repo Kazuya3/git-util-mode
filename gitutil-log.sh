@@ -1,7 +1,5 @@
 GITLOG_FILE=D:/myRoot/home/.git/log.gitlog
 
-echo "$1"
-
 # 引数のファイルが存在するかチェック。
 if [ -e "$1" ]; then
 	

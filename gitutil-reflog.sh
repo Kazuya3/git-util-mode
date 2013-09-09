@@ -1,7 +1,5 @@
 GITLOG_FILE=D:/myRoot/home/.git/reflog.gitlog
 
-echo "$1"
-
 # モード識別子挿入。
 echo "reflog" > ${GITLOG_FILE}
 
