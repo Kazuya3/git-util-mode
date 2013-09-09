@@ -15,7 +15,8 @@ if [ -e "$1" ]; then
 	echo "$1" >> ${GITLOG_FILE}
 	
 	# git log の実行結果を GITLOG_FILE に追記。
-	git log "$1" >> ${GITLOG_FILE}
+#	git log "$1" >> ${GITLOG_FILE}
+	git log -20 --pretty=format:"%at %H %aN %aE %n%B" >> ${GITLOG_FILE}
 	
 	# gitlog-mode を呼ぶ。
 	D:/myRoot/opt/xyzzy/xyzzy.exe -l D:/myRoot/opt/xyzzy/site-lisp/gitlog-mode.l ${GITLOG_FILE}

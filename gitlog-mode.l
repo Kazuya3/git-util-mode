@@ -75,6 +75,15 @@
 	)
   )
 
+(defun convert-unix-time-to-utc (unix-time)
+  "UNIX時間をユニバーサルタイムに変換する。"
+  (let ((unix-epoch (encode-universal-time 0 0 0 1 1 1970))
+		utc-epoch
+		)
+	(+ unix-time unix-epoch)
+	)
+  )
+
 (defun _gitlog-parse-log (log-file)
   "
 @brief	log の結果をパースする。
@@ -84,26 +93,19 @@
   ; target-file-name って使われていないっぽい。
   ; しばらく様子を見て、必要ないようなら消す。
   (let ((objects (list))
-		target-file-name line splited sha1 author mail date description)
+		target-file-name line splited sha1 author mail unix-time description)
 	(setf target-file-name (read-line log-file nil nil))
 	(loop
 	  (setf line (read-line log-file nil nil))
-	  (cond
-	   ((not line)
+	  (when (not line)
 		(return)
 		)
-	   ((not (string-match "^commit" line))
-		(return)
-		)
-	   )
-	  (setf sha1 (nth 1 (split-string line " ")))
-	  (setf line (read-line log-file nil nil))
 	  (setf splited (split-string line " "))
-	  (setf author (nth 1 splited))
-	  (setf mail (nth 2 splited))
-	  (setf line (read-line log-file nil nil))
-	  (setf date (substring line 8))
-	  (read-line log-file nil nil)
+	  (setf unix-time (parse-integer (pop splited)))
+	  (setf sha1 (pop splited))
+	  (setf author (pop splited))
+	  (setf mail (pop splited))
+	  ; body 解析
 	  (loop
 		(setf line (read-line log-file nil nil))
 		(if (= 0 (length line))
@@ -115,7 +117,7 @@
 			 :sha-1 sha1
 			 :author author
 			 :mail mail
-			 :date date
+			 :date unix-time
 			 :description description)
 			objects)
 	  (setf description "")
@@ -137,35 +139,20 @@
 		)
 	(loop
 	  (let (line splited sha1 reflog-pointer reflog-msg
-				 author mail date description)
+				 author mail unix-time action description)
 		(setf line (read-line log-file nil nil))
-		(cond
-		 ((not line)
+		(when (not line)
 		  (return)
 		  )
-		 ((not (string-match "^commit" line))
-		  (return)
-		  )
-		 )
+		(setf splited (split-string line " "))
+		(setf unix-time (parse-integer (pop splited)))
+		(setf sha1 (pop splited))
+		(setf author (pop splited))
+		(setf mail (pop splited))
 		(setf sha1 (nth 1 (split-string line " ")))
-		; 二行目
-		(setf line (read-line log-file nil nil))
-		(setf splited (split-string line " "))
-		(setf reflog-pointer (nth 1 splited))
-		; 三行目
-		(setf line (read-line log-file nil nil))
-		(setf reflog-msg (substring line 16))
-		; 四行目
-		(setf line (read-line log-file nil nil))
-		(setf splited (split-string line " "))
-		(setf author (nth 1 splited))
-		(setf mail (nth 2 splited))
-		; 五行目
-		(setf line (read-line log-file nil nil))
-		(setf splited (split-string line " "))
-		(setf date (substring line 8))
-		; 六行目
-		(read-line log-file nil nil)
+		(setf reflog-pointer (pop splited))
+		(setf reflog-msg (pop splited))
+		; body 解析
 		(loop
 		  (setf line (read-line log-file nil nil))
 		  (if (= 0 (length line))
@@ -179,7 +166,7 @@
 			   :reflog-msg reflog-msg
 			   :author author
 			   :mail mail
-			   :date date
+			   :date unix-time
 			   :description description)
 			  objects)
 		)
@@ -263,6 +250,11 @@
 	)
   )
 
+(defun _gitlog-make-date-string-from-unix-time (unix-time)
+  "UNIX時間を書式に従った文字列として返す。"
+  (format-date-string "%Y/%m/%d %H:%M %z" (convert-unix-time-to-utc unix-time))
+  )
+
 (defun _gitlog-create-log-text (object)
   "
 @brief	logモードにおいて、
@@ -270,7 +262,8 @@
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A~%"
 		  (git-commit-object-checked object)
-		  (git-commit-object-date object)
+		  (_gitlog-make-date-string-from-unix-time
+		   (git-commit-object-date object))
 		  (git-commit-object-author object))
   )
 
@@ -282,7 +275,8 @@
   (format nil "[~:[ ~;*~]] ~A	~A	~A ~A~%"
 		  (git-commit-object-checked object)
 		  (git-commit-object-reflog-pointer object)
-		  (git-commit-object-date object)
+		  (_gitlog-make-date-string-from-unix-time
+		   (git-commit-object-date object))
 		  (git-commit-object-author object)
 		  (git-commit-object-reflog-msg object)
 		  )
@@ -321,13 +315,15 @@
 	(set-window-with-buffer-name "Git description")
 	(setf buffer-read-only nil)
 	(erase-buffer (selected-buffer))
-	(insert (format nil "SHA-1	~A~%Author	~A ~A~%Date	~A~%~%~A~%"
-					(git-commit-object-sha-1 commit)
-					(git-commit-object-author commit)
-					(git-commit-object-mail commit)
-					(git-commit-object-date commit)
-					(git-commit-object-description commit)
-					)
+	(insert (format
+			 nil "SHA-1	~A~%Author	~A~%Mail	~A~%Date	~A~%~%~A~%"
+			 (git-commit-object-sha-1 commit)
+			 (git-commit-object-author commit)
+			 (git-commit-object-mail commit)
+			 (_gitlog-make-date-string-from-unix-time
+			  (git-commit-object-date commit))
+			 (git-commit-object-description commit)
+			 )
 			)
 	)
   (setf buffer-read-only t)
