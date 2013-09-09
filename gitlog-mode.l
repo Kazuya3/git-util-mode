@@ -37,7 +37,7 @@
   (reflog-msg nil)
   (author	nil)
   (mail		nil)
-  (date		nil)
+  (unix-time	nil)
   (description	nil)
   (checked	nil)
   )
@@ -117,7 +117,7 @@
 			 :sha-1 sha1
 			 :author author
 			 :mail mail
-			 :date unix-time
+			 :unix-time unix-time
 			 :description description)
 			objects)
 	  (setf description "")
@@ -166,7 +166,7 @@
 			   :reflog-msg reflog-msg
 			   :author author
 			   :mail mail
-			   :date unix-time
+			   :unix-time unix-time
 			   :description description)
 			  objects)
 		)
@@ -263,7 +263,7 @@
   (format nil "[~:[ ~;*~]] ~A	~A~%"
 		  (git-commit-object-checked object)
 		  (_gitlog-make-date-string-from-unix-time
-		   (git-commit-object-date object))
+		   (git-commit-object-unix-time object))
 		  (git-commit-object-author object))
   )
 
@@ -276,7 +276,7 @@
 		  (git-commit-object-checked object)
 		  (git-commit-object-reflog-pointer object)
 		  (_gitlog-make-date-string-from-unix-time
-		   (git-commit-object-date object))
+		   (git-commit-object-unix-time object))
 		  (git-commit-object-author object)
 		  (git-commit-object-reflog-msg object)
 		  )
@@ -321,7 +321,7 @@
 			 (git-commit-object-author commit)
 			 (git-commit-object-mail commit)
 			 (_gitlog-make-date-string-from-unix-time
-			  (git-commit-object-date commit))
+			  (git-commit-object-unix-time commit))
 			 (git-commit-object-description commit)
 			 )
 			)
