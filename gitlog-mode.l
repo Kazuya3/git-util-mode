@@ -32,12 +32,7 @@
 ; 構造体定義
 ; -----------------------------------------------------------------------------
 (defstruct git-commit-object
-  (sha1	nil)
-  (reflog-pointer nil)
-  (reflog-msg nil)
-  (author	nil)
-  (mail		nil)
-  (unix-time	nil)
+  (splited-info	nil)
   (description	nil)
   (checked	nil)
   )
@@ -84,6 +79,43 @@
 	)
   )
 
+
+; -----------------------------------------------------------------------------
+; 情報行から情報を取得する関数
+; -----------------------------------------------------------------------------
+(defun _gitlog-commit-object-formated-date (object)
+  "
+@brief	コミットオブジェクトからフォーマットに従った日時の文字列を取得する。
+@param object	コミットオブジェクト
+@return	フォーマットに従った日時の文字列
+"
+  (_gitlog-make-date-string-from-unix-time
+   (parse-integer (nth 0 (git-commit-object-splited-info object))))
+  )
+
+(defun _gitlog-commit-object-sha1 (object)
+  (nth 1 (git-commit-object-splited-info object))
+  )
+
+(defun _gitlog-commit-object-author (object)
+  (nth 2 (git-commit-object-splited-info object))
+  )
+
+(defun _gitlog-commit-object-mail (object)
+  (nth 3 (git-commit-object-splited-info object))
+  )
+
+(defun _gitlog-commit-object-reflog-selector (object)
+  (concat (nth 4 (git-commit-object-splited-info object))
+		  (nth 5 (git-commit-object-splited-info object))
+		  )
+  )
+
+(defun _gitlog-commit-object-reflog-subject (object)
+  (nth 6 (git-commit-object-splited-info object))
+  )
+
+
 (defun _gitlog-parse-log (log-file)
   "
 @brief	log の結果をパースする。
@@ -91,17 +123,13 @@
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
   (let ((objects (list))
-		line splited sha1 author mail unix-time description)
+		line splited description)
 	(loop
 	  (setf line (read-line log-file nil nil))
 	  (when (not line)
 		(return)
 		)
 	  (setf splited (split-string line " "))
-	  (setf unix-time (parse-integer (pop splited)))
-	  (setf sha1 (pop splited))
-	  (setf author (pop splited))
-	  (setf mail (pop splited))
 	  ; body 解析
 	  (loop
 		(setf line (read-line log-file nil nil))
@@ -111,59 +139,10 @@
 		(setf description (concat description line "\n"))
 		)
 	  (push (make-git-commit-object
-			 :sha1 sha1
-			 :author author
-			 :mail mail
-			 :unix-time unix-time
+			 :splited-info splited
 			 :description description)
 			objects)
 	  (setf description "")
-	  )
-	(reverse objects)
-	)
-  )
-
-(defun _gitlog-parse-reflog (log-file)
-  "
-@brief	reflog の結果をバースする。
-@param log-file	ログファイルのストリーム
-@return	log-file をパースして得たコミットオブジェクトのリスト
-"
-  (let ((objects (list))
-		)
-	(loop
-	  (let (line splited sha1 reflog-pointer reflog-msg
-				 author mail unix-time action description)
-		(setf line (read-line log-file nil nil))
-		(when (not line)
-		  (return)
-		  )
-		(setf splited (split-string line " "))
-		(setf unix-time (parse-integer (pop splited)))
-		(setf sha1 (pop splited))
-		(setf author (pop splited))
-		(setf mail (pop splited))
-		(setf sha1 (nth 1 (split-string line " ")))
-		(setf reflog-pointer (pop splited))
-		(setf reflog-msg (pop splited))
-		; body 解析
-		(loop
-		  (setf line (read-line log-file nil nil))
-		  (if (= 0 (length line))
-			  (return)
-			)
-		  (setf description (concat description line "\n"))
-		  )
-		(push (make-git-commit-object
-			   :sha1 sha1
-			   :reflog-pointer reflog-pointer
-			   :reflog-msg reflog-msg
-			   :author author
-			   :mail mail
-			   :unix-time unix-time
-			   :description description)
-			  objects)
-		)
 	  )
 	(reverse objects)
 	)
@@ -227,8 +206,8 @@
 			  (setf command
 					(format nil "~A difftool ~A ~A ~A"
 							*gitlog-git-executable-path*
-							(git-commit-object-sha1 (nth 0 checkeds))
-							(git-commit-object-sha1 (nth 1 checkeds))
+							(_gitlog-commit-object-sha1 (nth 0 checkeds))
+							(_gitlog-commit-object-sha1 (nth 1 checkeds))
 							gitlog-target-file-name)
 					)
 			  (call-process command
@@ -256,9 +235,8 @@
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A~%"
 		  (git-commit-object-checked object)
-		  (_gitlog-make-date-string-from-unix-time
-		   (git-commit-object-unix-time object))
-		  (git-commit-object-author object))
+		  (_gitlog-commit-object-formated-date object)
+		  (_gitlog-commit-object-author object))
   )
 
 (defun _gitlog-create-reflog-text (object)
@@ -268,11 +246,10 @@
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A	~A ~A~%"
 		  (git-commit-object-checked object)
-		  (git-commit-object-reflog-pointer object)
-		  (_gitlog-make-date-string-from-unix-time
-		   (git-commit-object-unix-time object))
-		  (git-commit-object-author object)
-		  (git-commit-object-reflog-msg object)
+		  (_gitlog-commit-object-reflog-selector object)
+		  (_gitlog-commit-object-formated-date object)
+		  (_gitlog-commit-object-author object)
+		  (_gitlog-commit-object-reflog-subject object)
 		  )
   )
 
@@ -311,11 +288,10 @@
 	(erase-buffer (selected-buffer))
 	(insert (format
 			 nil "SHA-1	~A~%Author	~A~%Mail	~A~%Date	~A~%~%~A~%"
-			 (git-commit-object-sha1 commit)
-			 (git-commit-object-author commit)
-			 (git-commit-object-mail commit)
-			 (_gitlog-make-date-string-from-unix-time
-			  (git-commit-object-unix-time commit))
+			 (_gitlog-commit-object-sha1 commit)
+			 (_gitlog-commit-object-author commit)
+			 (_gitlog-commit-object-mail commit)
+			 (_gitlog-commit-object-formated-date commit)
 			 (git-commit-object-description commit)
 			 )
 			)
@@ -345,7 +321,7 @@
   (interactive)
   "カーソルがある行でチェックアウトする。"
   (let* ((commit (_gitlog-current-commit))
-		 (sha1 (git-commit-object-sha1 commit))
+		 (sha1 (_gitlog-commit-object-sha1 commit))
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
@@ -359,7 +335,7 @@
   "カーソルがある行が指すコミットでリセットする。"
   (interactive)
   (let* ((commit (_gitlog-current-commit))
-		 (reflog-pointer (git-commit-object-reflog-pointer commit))
+		 (reflog-pointer (_gitlog-commit-object-reflog-selector commit))
 		 answer mode
 		 )
 	(loop
@@ -483,18 +459,17 @@
 		  )
 		(let ((mode-stuff-containers
 			   '(("log" .
-				  (_gitlog-define-log-mode-keymap _gitlog-parse-log))
+				  (_gitlog-define-log-mode-keymap))
 				 ("reflog" .
-				  (_gitlog-define-reflog-mode-keymap _gitlog-parse-reflog))
+				  (_gitlog-define-reflog-mode-keymap))
 				 )
-			   mode-stuffs keymap-definer parser)
+			   mode-stuffs keymap-definer)
 			  )
 		  (setf mode-stuffs
 				(cdr (assoc gitlog-mode mode-stuff-containers :test 'string=)))
 		  (setf keymap-definer (nth 0 mode-stuffs))
-		  (setf parser (nth 1 mode-stuffs))
 		  (funcall keymap-definer (local-keymap (selected-buffer)))
-		  (setf gitlog-commit-objects (funcall parser file))
+		  (setf gitlog-commit-objects (_gitlog-parse-log file))
 		  )
 		)
 	  )
