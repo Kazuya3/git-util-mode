@@ -73,9 +73,10 @@
 (defun convert-unix-time-to-utc (unix-time)
   "UNIX時間をユニバーサルタイムに変換する。"
   (let ((unix-epoch (encode-universal-time 0 0 0 1 1 1970))
+		(jst-delta (* -1 (encode-universal-time 0 0 0 1 1 1900)))
 		utc-epoch
 		)
-	(+ unix-time unix-epoch)
+	(+ unix-time unix-epoch jst-delta)
 	)
   )
 
