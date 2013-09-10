@@ -106,13 +106,11 @@
   )
 
 (defun _gitlog-commit-object-reflog-selector (object)
-  (concat (nth 4 (git-commit-object-splited-info object))
-		  (nth 5 (git-commit-object-splited-info object))
-		  )
+  (nth 4 (git-commit-object-splited-info object))
   )
 
 (defun _gitlog-commit-object-reflog-subject (object)
-  (nth 6 (git-commit-object-splited-info object))
+  (nth 5 (git-commit-object-splited-info object))
   )
 
 
@@ -129,7 +127,7 @@
 	  (when (not line)
 		(return)
 		)
-	  (setf splited (split-string line " "))
+	  (setf splited (split-string line "|"))
 	  ; body 解析
 	  (loop
 		(setf line (read-line log-file nil nil))
