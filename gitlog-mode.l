@@ -172,8 +172,8 @@
 (defun _gitlog-mark-toggle ()
   "@brief	ログペインのコミットのマークをトグルする。"
   (interactive)
-  (let ((commit (_gitlog-current-commit)))
-	(setf (git-commit-object-checked commit) (if (git-commit-object-checked commit) nil t))
+  (let ((object (_gitlog-current-commit)))
+	(setf (git-commit-object-checked object) (if (git-commit-object-checked object) nil t))
 	)
   (_gitlog-update-logpane gitlog-commit-objects)
   )
@@ -188,9 +188,9 @@
 				  (checkeds (list))
 				  command
 				  )
-			  (dolist (commit gitlog-commit-objects)
-				(when (git-commit-object-checked commit)
-				  (push commit checkeds)
+			  (dolist (object gitlog-commit-objects)
+				(when (git-commit-object-checked object)
+				  (push object checkeds)
 				  (when (< 2 (incf checked-num))
 					(return-from top
 					  "Comparation more than three is not supported.")
@@ -280,17 +280,17 @@
 
 (defun _gitlog-detail-open ()
   "@brief	コミットログペイン更新。"
-  (let ((commit (_gitlog-current-commit)))
+  (let ((object (_gitlog-current-commit)))
 	(set-window-with-buffer-name "Git description")
 	(setf buffer-read-only nil)
 	(erase-buffer (selected-buffer))
 	(insert (format
 			 nil "SHA-1	~A~%Author	~A~%Mail	~A~%Date	~A~%~%~A~%"
-			 (_gitlog-commit-object-sha1 commit)
-			 (_gitlog-commit-object-author commit)
-			 (_gitlog-commit-object-mail commit)
-			 (_gitlog-commit-object-formated-date commit)
-			 (git-commit-object-description commit)
+			 (_gitlog-commit-object-sha1 object)
+			 (_gitlog-commit-object-author object)
+			 (_gitlog-commit-object-mail object)
+			 (_gitlog-commit-object-formated-date object)
+			 (git-commit-object-description object)
 			 )
 			)
 	)
@@ -318,8 +318,8 @@
 (defun _gitlog-checkout()
   (interactive)
   "カーソルがある行でチェックアウトする。"
-  (let* ((commit (_gitlog-current-commit))
-		 (sha1 (_gitlog-commit-object-sha1 commit))
+  (let* ((object (_gitlog-current-commit))
+		 (sha1 (_gitlog-commit-object-sha1 object))
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
@@ -332,8 +332,8 @@
 (defun _gitlog-reset ()
   "カーソルがある行が指すコミットでリセットする。"
   (interactive)
-  (let* ((commit (_gitlog-current-commit))
-		 (reflog-pointer (_gitlog-commit-object-reflog-selector commit))
+  (let* ((object (_gitlog-current-commit))
+		 (reflog-pointer (_gitlog-commit-object-reflog-selector object))
 		 answer mode
 		 )
 	(loop
