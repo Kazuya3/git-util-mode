@@ -226,7 +226,7 @@
   (format-date-string "%Y/%m/%d %H:%M %z" (convert-unix-time-to-utc unix-time))
   )
 
-(defun _gitlog-create-log-text (object)
+(defun _gitlog-make-log-text (object)
   "
 @brief	logモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
@@ -237,7 +237,7 @@
 		  (_gitlog-commit-object-author object))
   )
 
-(defun _gitlog-create-reflog-text (object)
+(defun _gitlog-make-reflog-text (object)
   "
 @brief	reflogモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
@@ -256,14 +256,14 @@
   (set-window-with-buffer-name "Git log")
   (setf buffer-read-only nil)
   (let ((cursor-position (current-line-number))
-		(text-creators '(("log" . _gitlog-create-log-text)
-						 ("reflog" . _gitlog-create-reflog-text)))
-		text-creator
+		(text-makers '(("log" . _gitlog-make-log-text)
+					   ("reflog" . _gitlog-make-reflog-text)))
+		text-maker
 		)
-	(setf text-creator (cdr (assoc gitlog-mode text-creators :test 'string=)))
+	(setf text-maker (cdr (assoc gitlog-mode text-makers :test 'string=)))
 	(erase-buffer (selected-buffer))
 	(dolist (object commit-objects)
-	  (insert (funcall text-creator object))
+	  (insert (funcall text-maker object))
 	  )
 	(delete-backward-char)
 	(setf buffer-read-only t)
