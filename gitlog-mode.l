@@ -32,7 +32,7 @@
 ; 構造体定義
 ; -----------------------------------------------------------------------------
 (defstruct git-commit-object
-  (sha-1	nil)
+  (sha1	nil)
   (reflog-pointer nil)
   (reflog-msg nil)
   (author	nil)
@@ -111,7 +111,7 @@
 		(setf description (concat description line "\n"))
 		)
 	  (push (make-git-commit-object
-			 :sha-1 sha1
+			 :sha1 sha1
 			 :author author
 			 :mail mail
 			 :unix-time unix-time
@@ -155,7 +155,7 @@
 		  (setf description (concat description line "\n"))
 		  )
 		(push (make-git-commit-object
-			   :sha-1 sha1
+			   :sha1 sha1
 			   :reflog-pointer reflog-pointer
 			   :reflog-msg reflog-msg
 			   :author author
@@ -227,8 +227,8 @@
 			  (setf command
 					(format nil "~A difftool ~A ~A ~A"
 							*gitlog-git-executable-path*
-							(git-commit-object-sha-1 (nth 0 checkeds))
-							(git-commit-object-sha-1 (nth 1 checkeds))
+							(git-commit-object-sha1 (nth 0 checkeds))
+							(git-commit-object-sha1 (nth 1 checkeds))
 							gitlog-target-file-name)
 					)
 			  (call-process command
@@ -311,7 +311,7 @@
 	(erase-buffer (selected-buffer))
 	(insert (format
 			 nil "SHA-1	~A~%Author	~A~%Mail	~A~%Date	~A~%~%~A~%"
-			 (git-commit-object-sha-1 commit)
+			 (git-commit-object-sha1 commit)
 			 (git-commit-object-author commit)
 			 (git-commit-object-mail commit)
 			 (_gitlog-make-date-string-from-unix-time
@@ -345,11 +345,11 @@
   (interactive)
   "カーソルがある行でチェックアウトする。"
   (let* ((commit (_gitlog-current-commit))
-		 (sha-1 (git-commit-object-sha-1 commit))
+		 (sha1 (git-commit-object-sha1 commit))
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
-							*gitlog-git-executable-path* sha-1
+							*gitlog-git-executable-path* sha1
 							gitlog-target-file-name))
 	  )
 	)
