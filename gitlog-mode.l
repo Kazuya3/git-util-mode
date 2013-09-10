@@ -90,11 +90,8 @@
 @param log-file	ログファイルのストリーム
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
-  ; target-file-name って使われていないっぽい。
-  ; しばらく様子を見て、必要ないようなら消す。
   (let ((objects (list))
-		target-file-name line splited sha1 author mail unix-time description)
-	(setf target-file-name (read-line log-file nil nil))
+		line splited sha1 author mail unix-time description)
 	(loop
 	  (setf line (read-line log-file nil nil))
 	  (when (not line)
@@ -132,10 +129,7 @@
 @param log-file	ログファイルのストリーム
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
-  ; target-file-name って使われていないっぽい。
-  ; しばらく様子を見て、必要ないようなら消す。
   (let ((objects (list))
-		target-file-name
 		)
 	(loop
 	  (let (line splited sha1 reflog-pointer reflog-msg
@@ -235,7 +229,7 @@
 							*gitlog-git-executable-path*
 							(git-commit-object-sha-1 (nth 0 checkeds))
 							(git-commit-object-sha-1 (nth 1 checkeds))
-							gitlog-target)
+							gitlog-target-file-name)
 					)
 			  (call-process command
 							:exec-directory gitlog-exec-directory
@@ -355,7 +349,8 @@
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
-							*gitlog-git-executable-path* sha-1 gitlog-target))
+							*gitlog-git-executable-path* sha-1
+							gitlog-target-file-name))
 	  )
 	)
   )
@@ -461,6 +456,7 @@
 	(_gitlog-setup-mode-line)
 	(use-keymap (_gitlog-make-general-keymap))
 	(make-local-variable 'gitlog-exec-directory)
+	; diff やチェックアウトで使用する。
 	(make-local-variable 'gitlog-target-file-name)
 	(make-local-variable 'gitlog-commit-objects)
 	(make-local-variable 'gitlog-mode)
@@ -472,6 +468,11 @@
 	  (with-open-file (file log-file-name :encoding :text)
 		(setf gitlog-mode (read-line file nil nil))
 		(setf gitlog-exec-directory (read-line file nil nil))
+		(cond
+		 ((string= "log" gitlog-mode)
+		  (setf gitlog-target-file-name (read-line file nil nil))
+		  )
+		 )
 		; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 		; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
 		; 変換するようにした。
