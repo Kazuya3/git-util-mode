@@ -132,7 +132,7 @@
 	  ; body 解析
 	  (loop
 		(setf line (read-line log-file nil nil))
-		(if (= 0 (length line))
+		(if (string-match "^`$" line)
 			(return)
 		  )
 		(setf description (concat description line "\n"))
