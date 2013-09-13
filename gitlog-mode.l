@@ -172,6 +172,32 @@
   (define-key keymap #\r '_gitlog-reset)
   )
 
+(defun _gitlog-load-log-mode-manual ()
+  )
+
+(defun _gitlog-load-reflog-mode-manual ()
+  )
+
+(defun _gitlog-setup-manual-pane ()
+  "マニュアルペイン設定"
+  (save-window-excursion
+	(switch-to-buffer "Git operating")
+	(setup-temp-buffer (selected-buffer))
+	(_gitlog-setup-mode-line)
+	(insert-file (merge-pathnames "gitlog/general.txt" *etc-path*))
+	(goto-eof)
+	(cond
+	 ((string= "log" *gitlog-mode*)
+	  (insert-file (merge-pathnames "gitlog/log-mode.txt" *etc-path*))
+	  )
+	 ((string= "reflog" *gitlog-mode*)
+	  (insert-file (merge-pathnames "gitlog/reflog-mode.txt" *etc-path*))
+	  )
+	 )
+	(setf buffer-read-only t)
+	)
+  )
+
 (defun _gitlog-mark-toggle ()
   "@brief	ログペインのコミットのマークをトグルする。"
   (interactive)
@@ -428,12 +454,8 @@
 	(split-window)
 	(split-window-vertically 80)
 
-	; 操作法ペイン初期化
+	; レイアウトのため、ここで操作法ペイン作成。
 	(switch-to-buffer "Git operating")
-	(setup-temp-buffer (selected-buffer))
-	(_gitlog-setup-mode-line)
-	(insert-file (merge-pathnames "gitlog-mode.readme" *etc-path*))
-	(setf buffer-read-only t)
 
 	; ログペイン作成
 	(switch-to-buffer-other-window "Git log")
@@ -480,6 +502,7 @@
 		  (setf gitlog-target-file-name (read-line file nil nil))
 		  )
 		 )
+		(_gitlog-setup-manual-pane)
 		; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 		; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
 		; 変換するようにした。
