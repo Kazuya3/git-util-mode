@@ -163,6 +163,7 @@
   "@brief	log 用のキーマップ定義"
   (define-key keymap #\RET '_gitlog-compare-commits)
   (define-key keymap #\c '_gitlog-checkout)
+  (define-key keymap #\s '_gitlog-retroversion)
   )
 
 (defun _gitlog-define-reflog-mode-keymap (keymap)
@@ -375,6 +376,37 @@
 						  *gitlog-git-executable-path* mode reflog-pointer))
 	)
   (message "reset has done.")
+  )
+
+(defun _gitlog-retroversion ()
+  "@brief	特定のリビジョンのファイルを取得する。"
+  (interactive)
+  (let* ((object (_gitlog-current-commit))
+		 (sha1 (_gitlog-commit-object-sha1 object))
+		 (file-name gitlog-target-file-name)
+		 answer
+		 )
+	(setf file-name (read-string "ファイル名を指定してください。>"
+								 :default file-name))
+	(loop
+	  (setf answer (read-string (format nil "~A のリビジョンの ~A の内容を~
+~A というファイルに出力します。よろしいですか？ [y, n]?"
+										sha1 gitlog-target-file-name
+										file-name)))
+	  (cond
+	   ((string= "y" answer)
+		(return)
+		)
+	   ((string= "n" answer)
+		(message "処理を中断しました。")
+		(return-from _gitlog-retroversion)
+		)
+	   )
+	  )
+	(call-process (format nil "\"~A\" show ~A:~A"
+						  *gitlog-git-executable-path* sha1
+						  gitlog-target-file-name) :output file-name)
+	)
   )
 
 (defun gitlog-mode (&optional log-file-name)
