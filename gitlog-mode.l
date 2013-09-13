@@ -41,6 +41,7 @@
 ; -----------------------------------------------------------------------------
 ; 変数定義
 ; -----------------------------------------------------------------------------
+(defvar *gitlog-mode* nil)
 (defvar *gitlog-git-executable-path* "C:/Program Files/Git/bin/git.exe")
 
 
@@ -262,7 +263,7 @@
 					   ("reflog" . _gitlog-make-reflog-text)))
 		text-maker
 		)
-	(setf text-maker (cdr (assoc gitlog-mode text-makers :test 'string=)))
+	(setf text-maker (cdr (assoc *gitlog-mode* text-makers :test 'string=)))
 	(erase-buffer (selected-buffer))
 	(dolist (object commit-objects)
 	  (insert (funcall text-maker object))
@@ -466,17 +467,16 @@
 	; diff やチェックアウトで使用する。
 	(make-local-variable 'gitlog-target-file-name)
 	(make-local-variable 'gitlog-commit-objects)
-	(make-local-variable 'gitlog-mode)
 
 	; log-file-name が sjis じゃない場合に、sjis に変換する。
 	(convert-char-code log-file-name *encoding-sjis*)
 
 	(let (file)
 	  (with-open-file (file log-file-name :encoding :text)
-		(setf gitlog-mode (read-line file nil nil))
+		(setf *gitlog-mode* (read-line file nil nil))
 		(setf gitlog-exec-directory (read-line file nil nil))
 		(cond
-		 ((string= "log" gitlog-mode)
+		 ((string= "log" *gitlog-mode*)
 		  (setf gitlog-target-file-name (read-line file nil nil))
 		  )
 		 )
@@ -497,7 +497,7 @@
 			   mode-stuffs keymap-definer)
 			  )
 		  (setf mode-stuffs
-				(cdr (assoc gitlog-mode mode-stuff-containers :test 'string=)))
+				(cdr (assoc *gitlog-mode* mode-stuff-containers :test 'string=)))
 		  (setf keymap-definer (nth 0 mode-stuffs))
 		  (funcall keymap-definer (local-keymap (selected-buffer)))
 		  (setf gitlog-commit-objects (_gitlog-parse-log file))
