@@ -305,7 +305,10 @@
 
 (defun _gitlog-current-commit ()
   "@brief	カーソルがある行に対応したコミットオブジェクトを取得。"
-  (nth (- (current-line-number) 1) *gitlog-commit-objects*)
+  (save-window-excursion
+	(set-window-with-buffer-name "Git log")
+	(nth (- (current-line-number) 1) *gitlog-commit-objects*)
+	)
   )
 
 (defun _gitlog-detail-open ()
