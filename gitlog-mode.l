@@ -42,6 +42,7 @@
 ; 変数定義
 ; -----------------------------------------------------------------------------
 (defvar *gitlog-mode* nil)
+(defvar *gitlog-commit-objects* nil)
 (defvar *gitlog-git-executable-path* "C:/Program Files/Git/bin/git.exe")
 
 
@@ -204,7 +205,7 @@
   (let ((object (_gitlog-current-commit)))
 	(setf (git-commit-object-checked object) (if (git-commit-object-checked object) nil t))
 	)
-  (_gitlog-update-logpane gitlog-commit-objects)
+  (_gitlog-update-logpane *gitlog-commit-objects*)
   )
 
 (defun _gitlog-compare-commits ()
@@ -217,7 +218,7 @@
 				  (checkeds (list))
 				  command
 				  )
-			  (dolist (object gitlog-commit-objects)
+			  (dolist (object *gitlog-commit-objects*)
 				(when (git-commit-object-checked object)
 				  (push object checkeds)
 				  (when (< 2 (incf checked-num))
@@ -296,7 +297,7 @@
 	  )
 	(delete-backward-char)
 	(setf buffer-read-only t)
-	(if (<= cursor-position (length gitlog-commit-objects))
+	(if (<= cursor-position (length *gitlog-commit-objects*))
 		(goto-line cursor-position)
 	  )
 	)
@@ -304,7 +305,7 @@
 
 (defun _gitlog-current-commit ()
   "@brief	カーソルがある行に対応したコミットオブジェクトを取得。"
-  (nth (- (current-line-number) 1) gitlog-commit-objects)
+  (nth (- (current-line-number) 1) *gitlog-commit-objects*)
   )
 
 (defun _gitlog-detail-open ()
@@ -488,7 +489,6 @@
 	(make-local-variable 'gitlog-exec-directory)
 	; diff やチェックアウトで使用する。
 	(make-local-variable 'gitlog-target-file-name)
-	(make-local-variable 'gitlog-commit-objects)
 
 	; log-file-name が sjis じゃない場合に、sjis に変換する。
 	(convert-char-code log-file-name *encoding-sjis*)
@@ -523,11 +523,11 @@
 				(cdr (assoc *gitlog-mode* mode-stuff-containers :test 'string=)))
 		  (setf keymap-definer (nth 0 mode-stuffs))
 		  (funcall keymap-definer (local-keymap (selected-buffer)))
-		  (setf gitlog-commit-objects (_gitlog-parse-log file))
+		  (setf *gitlog-commit-objects* (_gitlog-parse-log file))
 		  )
 		)
 	  )
-	(_gitlog-update-logpane gitlog-commit-objects)
+	(_gitlog-update-logpane *gitlog-commit-objects*)
 	(_gitlog-detail-open)
 	)
   )
