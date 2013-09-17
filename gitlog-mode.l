@@ -35,6 +35,7 @@
   (splited-info	nil)
   (description	nil)
   (checked	nil)
+  (files-status nil)	; 変更種類、ファイル名のタプルのリスト
   )
 
 
@@ -124,7 +125,9 @@
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
   (let ((objects (list))
-		line splited description)
+		line splited description file-status
+		(files-status (list))
+		)
 	(loop
 	  (setf line (read-line log-file nil nil))
 	  (when (not line)
@@ -139,11 +142,23 @@
 		  )
 		(setf description (concat description line "\n"))
 		)
+	  ; 変更ファイル情報解析
+	  (loop
+		(setf line (read-line log-file nil nil))
+		(when (= 0 (length line))
+		  (return)
+		  )
+		(setf file-status (split-string line "	"))
+		(push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
+		)
 	  (push (make-git-commit-object
 			 :splited-info splited
-			 :description description)
+			 :description description
+			 :files-status files-status
+			 )
 			objects)
 	  (setf description "")
+	  (setf files-status (list))
 	  )
 	(reverse objects)
 	)
@@ -331,16 +346,37 @@
   (set-window-with-buffer-name "Git log")
   )
 
+(defun _gitlog-update-modfiles-pane ()
+  "@brief	変更ファイルリストペイン更新"
+  (set-window-with-buffer-name "Modified files")
+  (setf buffer-read-only nil)
+  (erase-buffer (selected-buffer))
+  (let* ((object (_gitlog-current-commit))
+		 (files-status (git-commit-object-files-status object))
+		 )
+	(dolist (file-status files-status)
+	  (insert (format nil "~:[追加~;変更~]	~A~%"
+					  (car file-status) (cadr file-status)))
+	  )
+	)
+  (setf buffer-read-only t)
+  (set-window-with-buffer-name "Git log")
+  )
+
 (defun gitlog-show-next (&optional (lines 1))
   "@brief	コミットログペインの更新を伴ったカーソルの移動。"
   (interactive)
   (or (forward-line lines) (return-from gitlog-show-next))
-  (_gitlog-detail-open))
+  (_gitlog-detail-open)
+  (_gitlog-update-modfiles-pane)
+  )
 
 (defun gitlog-show-prev ()
   "@brief	コミットログペインの更新を伴ったカーソルの移動。"
   (interactive)
-  (gitlog-show-next -1))
+  (gitlog-show-next -1)
+  (_gitlog-update-modfiles-pane)
+  )
 
 (defun _gitlog-setup-mode-line ()
   "@brief	ウィンドウのステータス表示形式を変更。"
@@ -445,6 +481,7 @@
 "
   (interactive)
   (let ((logbuffer (selected-buffer))
+		manual-window log-window description-window modfiles-window
 		)
 
 	; 開発用にログファイルを指定したい場合は以下をコメントアウトする。
@@ -455,20 +492,33 @@
 	  (delete-pseudo-frame)
 	  )
 	(new-pseudo-frame "Git")
+	(setf manual-window (selected-window))
 	(split-window)
+	(split-window-vertically 80)
+	(set-window (previous-window (selected-window)))
 	(split-window-vertically 80)
 
 	; レイアウトのため、ここで操作法ペイン作成。
+	(set-window manual-window)
 	(switch-to-buffer "Git operating")
 
 	; ログペイン作成
 	(switch-to-buffer-other-window "Git log")
+	(setf log-window (selected-window))
 	(setup-temp-buffer (selected-buffer))
 
 	; デスクリプションペイン初期化
 	(switch-to-buffer-other-window "Git description")
+	(setf description-window (selected-window))
 	(setup-temp-buffer (selected-buffer))
 	(_gitlog-setup-mode-line)
+
+	; 変更ファイルリストペイン
+	(switch-to-buffer-other-window "Modified files")
+	(setf modfiles-window (selected-window))
+	(setup-temp-buffer (selected-buffer))
+	(_gitlog-setup-mode-line)
+	(setf buffer-read-only t)
 
 	; ログペイン初期化
 	(set-window-with-buffer-name "Git log")
