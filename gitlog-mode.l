@@ -582,6 +582,7 @@
 	  )
 	(_gitlog-update-logpane *gitlog-commit-objects*)
 	(_gitlog-detail-open)
+	(_gitlog-update-modfiles-pane)
 	)
   )
 
