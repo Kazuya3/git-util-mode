@@ -1,14 +1,14 @@
 GITLOG_FILE=D:/myRoot/home/.git/reflog.gitlog
 
-# ƒ‚[ƒh¯•Êq‘}“üB
+# ãƒ¢ãƒ¼ãƒ‰è­˜åˆ¥å­æŒ¿å…¥ã€‚
 echo "reflog" > ${GITLOG_FILE}
 
-# ƒJƒŒƒ“ƒgƒfƒBƒŒƒNƒgƒŠ‚ğ GITLOG_FILE ‚É’Ç‹LB
+# ã‚«ãƒ¬ãƒ³ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ GITLOG_FILE ã«è¿½è¨˜ã€‚
 pwd >> ${GITLOG_FILE}
 
-# git log ‚ÌÀsŒ‹‰Ê‚ğ GITLOG_FILE ‚É’Ç‹LB
+# git log ã®å®Ÿè¡Œçµæœã‚’ GITLOG_FILE ã«è¿½è¨˜ã€‚
 # git log -g >> ${GITLOG_FILE}
 git log --name-status -g --pretty=format:"%at|%H|%gN|%gE|%gD|%gs%n%B\`" >> ${GITLOG_FILE}
 
-# gitlog-mode ‚ğŒÄ‚ÔB
+# gitlog-mode ã‚’å‘¼ã¶ã€‚
 D:/myRoot/opt/xyzzy/xyzzy.exe -l D:/myRoot/opt/xyzzy/site-lisp/gitlog-mode.l ${GITLOG_FILE}

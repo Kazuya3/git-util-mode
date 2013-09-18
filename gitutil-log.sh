@@ -1,22 +1,22 @@
 GITLOG_FILE=D:/myRoot/home/.git/log.gitlog
 
-# à¯êîÇÃÉtÉ@ÉCÉãÇ™ë∂ç›Ç∑ÇÈÇ©É`ÉFÉbÉNÅB
+# ÂºïÊï∞„ÅÆ„Éï„Ç°„Ç§„É´„ÅåÂ≠òÂú®„Åô„Çã„Åã„ÉÅ„Çß„ÉÉ„ÇØ„ÄÇ
 if [ -e "$1" ]; then
 	
-	# ÉÇÅ[ÉhéØï éqë}ì¸ÅB
+	# „É¢„Éº„ÉâË≠òÂà•Â≠êÊåøÂÖ•„ÄÇ
 	echo "log" > ${GITLOG_FILE}
 
-	# ÉJÉåÉìÉgÉfÉBÉåÉNÉgÉäÇ GITLOG_FILE Ç…í«ãLÅB
+	# „Ç´„É¨„É≥„Éà„Éá„Ç£„É¨„ÇØ„Éà„É™„Çí GITLOG_FILE „Å´ËøΩË®ò„ÄÇ
 	pwd >> ${GITLOG_FILE}
 	
-	# à¯êîÅiëŒè€ÉtÉ@ÉCÉãÅjÇ GITLOG_FILE Ç…í«ãLÅB
+	# ÂºïÊï∞ÔºàÂØæË±°„Éï„Ç°„Ç§„É´Ôºâ„Çí GITLOG_FILE „Å´ËøΩË®ò„ÄÇ
 	echo "$1" >> ${GITLOG_FILE}
 	
-	# git log ÇÃé¿çsåãâ Ç GITLOG_FILE Ç…í«ãLÅB
+	# git log „ÅÆÂÆüË°åÁµêÊûú„Çí GITLOG_FILE „Å´ËøΩË®ò„ÄÇ
 #	git log "$1" >> ${GITLOG_FILE}
 	git log --name-status --pretty=format:"%at|%H|%aN|%aE|%n%B\`" >> ${GITLOG_FILE}
 	
-	# gitlog-mode ÇåƒÇ‘ÅB
+	# gitlog-mode „ÇíÂëº„Å∂„ÄÇ
 	D:/myRoot/opt/xyzzy/xyzzy.exe -l D:/myRoot/opt/xyzzy/site-lisp/gitlog-mode.l ${GITLOG_FILE}
 else
 	echo -e "Error!\nSpecify file what you want to see log."
