@@ -125,40 +125,40 @@
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
   (let ((objects (list))
-		line splited description file-status
-		(files-status (list))
 		)
 	(loop
-	  (setf line (read-line log-file nil nil))
-	  (when (not line)
-		(return)
-		)
-	  (setf splited (split-string line "|"))
-	  ; body 解析
-	  (loop
+	  (let (line splited description file-status
+				 (files-status (list))
+				 )
 		(setf line (read-line log-file nil nil))
-		(if (string-match "^`$" line)
-			(return)
-		  )
-		(setf description (concat description line "\n"))
-		)
-	  ; 変更ファイル情報解析
-	  (loop
-		(setf line (read-line log-file nil nil))
-		(when (= 0 (length line))
+		(when (not line)
 		  (return)
 		  )
-		(setf file-status (split-string line "	"))
-		(push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
+		(setf splited (split-string line "|"))
+		; body 解析
+		(loop
+		  (setf line (read-line log-file nil nil))
+		  (if (string-match "^`$" line)
+			  (return)
+			)
+		  (setf description (concat description line "\n"))
+		  )
+		; 変更ファイル情報解析
+		(loop
+		  (setf line (read-line log-file nil nil))
+		  (when (= 0 (length line))
+			(return)
+			)
+		  (setf file-status (split-string line "	"))
+		  (push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
+		  )
+		(push (make-git-commit-object
+			   :splited-info splited
+			   :description description
+			   :files-status files-status
+			   )
+			  objects)
 		)
-	  (push (make-git-commit-object
-			 :splited-info splited
-			 :description description
-			 :files-status files-status
-			 )
-			objects)
-	  (setf description "")
-	  (setf files-status (list))
 	  )
 	(reverse objects)
 	)
