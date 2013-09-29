@@ -201,7 +201,7 @@
 	(setup-temp-buffer (selected-buffer))
 	(_gitlog-setup-mode-line)
 	(insert-file (merge-pathnames "gitlog/general.txt" *etc-path*))
-	(goto-eof)
+	(goto-max)
 	(cond
 	 ((string= "log" *gitlog-mode*)
 	  (insert-file (merge-pathnames "gitlog/log-mode.txt" *etc-path*))
