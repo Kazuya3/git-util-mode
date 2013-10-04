@@ -192,7 +192,7 @@
 
 (defun define-log-mode-keymap (keymap)
   "@brief	log 用のキーマップ定義"
-  (define-key keymap #\RET 'toggle-mark)
+  (define-key keymap #\RET 'compare-commits)
   (define-key keymap #\c 'checkout)
   (define-key keymap #\s 'retroversion)
   )
