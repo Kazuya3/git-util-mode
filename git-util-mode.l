@@ -202,12 +202,6 @@
   (define-key keymap #\r 'reset)
   )
 
-(defun _gitlog-load-log-mode-manual ()
-  )
-
-(defun _gitlog-load-reflog-mode-manual ()
-  )
-
 (defun setup-manual-pane ()
   "マニュアルペイン設定"
   (save-window-excursion
