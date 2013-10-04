@@ -182,10 +182,10 @@
   "@brief	共通キーマップ作成"
   (let ((keymap (make-sparse-keymap)))
 	(define-key keymap #\SPC 'toggle-mark)
-	(define-key keymap #\n 'gitlog-show-next)
-	(define-key keymap #\C-n 'gitlog-show-next)
-	(define-key keymap #\p 'gitlog-show-prev)
-	(define-key keymap #\C-p 'gitlog-show-prev)
+	(define-key keymap #\n 'forward-log)
+	(define-key keymap #\C-n 'forward-log)
+	(define-key keymap #\p 'back-log)
+	(define-key keymap #\C-p 'back-log)
 	keymap
 	)
   )
@@ -377,18 +377,18 @@
   (set-window-with-buffer-name "Git log")
   )
 
-(defun gitlog-show-next (&optional (lines 1))
+(defun forward-log (&optional (lines 1))
   "@brief	コミットログペインの更新を伴ったカーソルの移動。"
   (interactive)
-  (or (forward-line lines) (return-from gitlog-show-next))
+  (or (forward-line lines) (return-from forward-log))
   (update-description)
   (update-modfiles-pane)
   )
 
-(defun gitlog-show-prev ()
+(defun back-log ()
   "@brief	コミットログペインの更新を伴ったカーソルの移動。"
   (interactive)
-  (gitlog-show-next -1)
+  (forward-log -1)
   (update-modfiles-pane)
   )
 
