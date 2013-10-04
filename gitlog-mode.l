@@ -465,6 +465,10 @@
 (defun _gitlog-retroversion ()
   "@brief	特定のリビジョンのファイルを取得する。"
   (interactive)
+  (when (= 0 (length gitlog-target-file-name))
+	(msgbox "ファイル名が指定されていません。")
+	(return-from _gitlog-retroversion)
+	)
   (let* ((object (_gitlog-current-commit))
 		 (sha1 (_gitlog-commit-object-sha1 object))
 		 (file-name gitlog-target-file-name)
