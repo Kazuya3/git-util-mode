@@ -14,24 +14,25 @@
 ;;; gitlogtool file-name
 
 
-(provide "gitlog")
-(in-package "editor")
+(provide "git-util")
+(defpackage "git-util" (:use "lisp" "editor"))
+(in-package "git-util")
 
 
 ; -----------------------------------------------------------------------------
 ; エキスポート
 ; -----------------------------------------------------------------------------
 ; 変数
-(export '(*gitlog-git-executable-path*))
+(export '(*git-executable-path*))
 
 ; 関数
-(export '(gitlog-mode))
+(export '(git-util-mode))
 
 
 ; -----------------------------------------------------------------------------
 ; 構造体定義
 ; -----------------------------------------------------------------------------
-(defstruct git-commit-object
+(defstruct commit
   (splited-info	nil)
   (description	nil)
   (checked	nil)
@@ -42,9 +43,9 @@
 ; -----------------------------------------------------------------------------
 ; 変数定義
 ; -----------------------------------------------------------------------------
-(defvar *gitlog-mode* nil)
-(defvar *gitlog-commit-objects* nil)
-(defvar *gitlog-git-executable-path* "C:/Program Files/Git/bin/git.exe")
+(defvar *mode* nil)		; 実行中のモードを表す文字列を格納する。
+(defvar *commits* nil)	; コミットオブジェクトのリスト
+(defvar *git-executable-path* "C:/Program Files/Git/bin/git.exe")
 
 
 ; -----------------------------------------------------------------------------
@@ -87,38 +88,38 @@
 ; -----------------------------------------------------------------------------
 ; 情報行から情報を取得する関数
 ; -----------------------------------------------------------------------------
-(defun _gitlog-commit-object-formated-date (object)
+(defun make-formated-date-from-commit (object)
   "
 @brief	コミットオブジェクトからフォーマットに従った日時の文字列を取得する。
 @param object	コミットオブジェクト
 @return	フォーマットに従った日時の文字列
 "
-  (_gitlog-make-date-string-from-unix-time
-   (parse-integer (nth 0 (git-commit-object-splited-info object))))
+  (make-date-string-from-unix-time
+   (parse-integer (nth 0 (commit-splited-info object))))
   )
 
-(defun _gitlog-commit-object-sha1 (object)
-  (nth 1 (git-commit-object-splited-info object))
+(defun get-sha1-from-commit (object)
+  (nth 1 (commit-splited-info object))
   )
 
-(defun _gitlog-commit-object-author (object)
-  (nth 2 (git-commit-object-splited-info object))
+(defun get-author-from-commit (object)
+  (nth 2 (commit-splited-info object))
   )
 
-(defun _gitlog-commit-object-mail (object)
-  (nth 3 (git-commit-object-splited-info object))
+(defun get-mail-from-commit (object)
+  (nth 3 (commit-splited-info object))
   )
 
-(defun _gitlog-commit-object-reflog-selector (object)
-  (nth 4 (git-commit-object-splited-info object))
+(defun get-reflog-selector-from-commit (object)
+  (nth 4 (commit-splited-info object))
   )
 
-(defun _gitlog-commit-object-reflog-subject (object)
-  (nth 5 (git-commit-object-splited-info object))
+(defun get-reflog-subject-from-commit (object)
+  (nth 5 (commit-splited-info object))
   )
 
 
-(defun _gitlog-parse-log (log-file)
+(defun parse-log (log-file)
   "
 @brief	log の結果をパースする。
 @param log-file	ログファイルのストリーム
@@ -165,7 +166,7 @@
 		  (setf file-status (split-string line "	"))
 		  (push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
 		  )
-		(push (make-git-commit-object
+		(push (make-commit
 			   :splited-info splited
 			   :description description
 			   :files-status files-status
@@ -177,10 +178,10 @@
 	)
   )
 
-(defun _gitlog-make-general-keymap ()
+(defun make-general-keymap ()
   "@brief	共通キーマップ作成"
   (let ((keymap (make-sparse-keymap)))
-	(define-key keymap #\SPC '_gitlog-mark-toggle)
+	(define-key keymap #\SPC 'toggle-mark)
 	(define-key keymap #\n 'gitlog-show-next)
 	(define-key keymap #\C-n 'gitlog-show-next)
 	(define-key keymap #\p 'gitlog-show-prev)
@@ -189,16 +190,16 @@
 	)
   )
 
-(defun _gitlog-define-log-mode-keymap (keymap)
+(defun define-log-mode-keymap (keymap)
   "@brief	log 用のキーマップ定義"
-  (define-key keymap #\RET '_gitlog-compare-commits)
-  (define-key keymap #\c '_gitlog-checkout)
-  (define-key keymap #\s '_gitlog-retroversion)
+  (define-key keymap #\RET 'toggle-mark)
+  (define-key keymap #\c 'checkout)
+  (define-key keymap #\s 'retroversion)
   )
 
-(defun _gitlog-define-reflog-mode-keymap (keymap)
+(defun define-reflog-mode-keymap (keymap)
   "@brief	reflog 用のキーマップ定義"
-  (define-key keymap #\r '_gitlog-reset)
+  (define-key keymap #\r 'reset)
   )
 
 (defun _gitlog-load-log-mode-manual ()
@@ -207,19 +208,19 @@
 (defun _gitlog-load-reflog-mode-manual ()
   )
 
-(defun _gitlog-setup-manual-pane ()
+(defun setup-manual-pane ()
   "マニュアルペイン設定"
   (save-window-excursion
 	(switch-to-buffer "Git operating")
 	(setup-temp-buffer (selected-buffer))
-	(_gitlog-setup-mode-line)
+	(setup-mode-line)
 	(insert-file (merge-pathnames "gitlog/general.txt" *etc-path*))
 	(goto-max)
 	(cond
-	 ((string= "log" *gitlog-mode*)
+	 ((string= "log" *mode*)
 	  (insert-file (merge-pathnames "gitlog/log-mode.txt" *etc-path*))
 	  )
-	 ((string= "reflog" *gitlog-mode*)
+	 ((string= "reflog" *mode*)
 	  (insert-file (merge-pathnames "gitlog/reflog-mode.txt" *etc-path*))
 	  )
 	 )
@@ -227,16 +228,16 @@
 	)
   )
 
-(defun _gitlog-mark-toggle ()
+(defun toggle-mark ()
   "@brief	ログペインのコミットのマークをトグルする。"
   (interactive)
-  (let ((object (_gitlog-current-commit)))
-	(setf (git-commit-object-checked object) (if (git-commit-object-checked object) nil t))
+  (let ((object (get-cursor-commit)))
+	(setf (commit-checked object) (if (commit-checked object) nil t))
 	)
-  (_gitlog-update-logpane *gitlog-commit-objects*)
+  (update-log-pane *commits*)
   )
 
-(defun _gitlog-compare-commits ()
+(defun compare-commits ()
   "@brief	マークのついたコミット間の際を Winmerge で表示。"
   (interactive)
   (let (error-message)
@@ -246,8 +247,8 @@
 				  (checkeds (list))
 				  command
 				  )
-			  (dolist (object *gitlog-commit-objects*)
-				(when (git-commit-object-checked object)
+			  (dolist (object *commits*)
+				(when (commit-checked object)
 				  (push object checkeds)
 				  (when (< 2 (incf checked-num))
 					(return-from top
@@ -261,9 +262,9 @@
 				)
 			  (setf command
 					(format nil "~A difftool ~A ~A ~A"
-							*gitlog-git-executable-path*
-							(_gitlog-commit-object-sha1 (nth 0 checkeds))
-							(_gitlog-commit-object-sha1 (nth 1 checkeds))
+							*git-executable-path*
+							(get-sha1-from-commit (nth 0 checkeds))
+							(get-sha1-from-commit (nth 1 checkeds))
 							gitlog-target-file-name)
 					)
 			  (call-process command
@@ -279,79 +280,79 @@
 	)
   )
 
-(defun _gitlog-make-date-string-from-unix-time (unix-time)
+(defun make-date-string-from-unix-time (unix-time)
   "UNIX時間を書式に従った文字列として返す。"
   (format-date-string "%Y/%m/%d %H:%M %z" (convert-unix-time-to-utc unix-time))
   )
 
-(defun _gitlog-make-log-text (object)
+(defun make-log-text (object)
   "
 @brief	logモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A~%"
-		  (git-commit-object-checked object)
-		  (_gitlog-commit-object-formated-date object)
-		  (_gitlog-commit-object-author object))
+		  (commit-checked object)
+		  (make-formated-date-from-commit object)
+		  (get-author-from-commit object))
   )
 
-(defun _gitlog-make-reflog-text (object)
+(defun make-reflog-text (object)
   "
 @brief	reflogモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
 @param object	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A	~A ~A~%"
-		  (git-commit-object-checked object)
-		  (_gitlog-commit-object-reflog-selector object)
-		  (_gitlog-commit-object-formated-date object)
-		  (_gitlog-commit-object-author object)
-		  (_gitlog-commit-object-reflog-subject object)
+		  (commit-checked object)
+		  (get-reflog-selector-from-commit object)
+		  (make-formated-date-from-commit object)
+		  (get-author-from-commit object)
+		  (get-reflog-subject-from-commit object)
 		  )
   )
 
-(defun _gitlog-update-logpane (commit-objects)
+(defun update-log-pane (commit-objects)
   "@brief	ログペイン更新。"
   (set-window-with-buffer-name "Git log")
   (setf buffer-read-only nil)
   (let ((cursor-position (current-line-number))
-		(text-makers '(("log" . _gitlog-make-log-text)
-					   ("reflog" . _gitlog-make-reflog-text)))
+		(text-makers '(("log" . make-log-text)
+					   ("reflog" . make-reflog-text)))
 		text-maker
 		)
-	(setf text-maker (cdr (assoc *gitlog-mode* text-makers :test 'string=)))
+	(setf text-maker (cdr (assoc *mode* text-makers :test 'string=)))
 	(erase-buffer (selected-buffer))
 	(dolist (object commit-objects)
 	  (insert (funcall text-maker object))
 	  )
 	(delete-backward-char)
 	(setf buffer-read-only t)
-	(if (<= cursor-position (length *gitlog-commit-objects*))
+	(if (<= cursor-position (length *commits*))
 		(goto-line cursor-position)
 	  )
 	)
   )
 
-(defun _gitlog-current-commit ()
+(defun get-cursor-commit ()
   "@brief	カーソルがある行に対応したコミットオブジェクトを取得。"
   (save-window-excursion
 	(set-window-with-buffer-name "Git log")
-	(nth (- (current-line-number) 1) *gitlog-commit-objects*)
+	(nth (- (current-line-number) 1) *commits*)
 	)
   )
 
-(defun _gitlog-detail-open ()
+(defun update-description ()
   "@brief	コミットログペイン更新。"
-  (let ((object (_gitlog-current-commit)))
+  (let ((object (get-cursor-commit)))
 	(set-window-with-buffer-name "Git description")
 	(setf buffer-read-only nil)
 	(erase-buffer (selected-buffer))
 	(insert (format
 			 nil "SHA-1	~A~%Author	~A~%Mail	~A~%Date	~A~%~%~A~%"
-			 (_gitlog-commit-object-sha1 object)
-			 (_gitlog-commit-object-author object)
-			 (_gitlog-commit-object-mail object)
-			 (_gitlog-commit-object-formated-date object)
-			 (git-commit-object-description object)
+			 (get-sha1-from-commit object)
+			 (get-author-from-commit object)
+			 (get-mail-from-commit object)
+			 (make-formated-date-from-commit object)
+			 (commit-description object)
 			 )
 			)
 	)
@@ -359,13 +360,13 @@
   (set-window-with-buffer-name "Git log")
   )
 
-(defun _gitlog-update-modfiles-pane ()
+(defun update-modfiles-pane ()
   "@brief	変更ファイルリストペイン更新"
   (set-window-with-buffer-name "Modified files")
   (setf buffer-read-only nil)
   (erase-buffer (selected-buffer))
-  (let* ((object (_gitlog-current-commit))
-		 (files-status (git-commit-object-files-status object))
+  (let* ((object (get-cursor-commit))
+		 (files-status (commit-files-status object))
 		 )
 	(dolist (file-status files-status)
 	  (insert (format nil "~:[追加~;変更~]	~A~%"
@@ -380,46 +381,46 @@
   "@brief	コミットログペインの更新を伴ったカーソルの移動。"
   (interactive)
   (or (forward-line lines) (return-from gitlog-show-next))
-  (_gitlog-detail-open)
-  (_gitlog-update-modfiles-pane)
+  (update-description)
+  (update-modfiles-pane)
   )
 
 (defun gitlog-show-prev ()
   "@brief	コミットログペインの更新を伴ったカーソルの移動。"
   (interactive)
   (gitlog-show-next -1)
-  (_gitlog-update-modfiles-pane)
+  (update-modfiles-pane)
   )
 
-(defun _gitlog-setup-mode-line ()
+(defun setup-mode-line ()
   "@brief	ウィンドウのステータス表示形式を変更。"
   (make-local-variable 'mode-line-format)
   (setq mode-line-format (format nil "%b"))
   )
 
-(defun _gitlog-checkout()
+(defun checkout()
   (interactive)
   "
 @brief	カーソルがある行でチェックアウトする。　
 ファイル名を指定していなくても
 （ gitlog-target-file-name が nil でも）使用できる。
 その場合は管理対象全てがチェックアウト対象となる。"
-  (let* ((object (_gitlog-current-commit))
-		 (sha1 (_gitlog-commit-object-sha1 object))
+  (let* ((object (get-cursor-commit))
+		 (sha1 (get-sha1-from-commit object))
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
-							*gitlog-git-executable-path* sha1
+							*git-executable-path* sha1
 							gitlog-target-file-name))
 	  )
 	)
   )
 
-(defun _gitlog-reset ()
+(defun reset ()
   "カーソルがある行が指すコミットでリセットする。"
   (interactive)
-  (let* ((object (_gitlog-current-commit))
-		 (reflog-pointer (_gitlog-commit-object-reflog-selector object))
+  (let* ((object (get-cursor-commit))
+		 (reflog-pointer (get-reflog-selector-from-commit object))
 		 answer mode
 		 )
 	(loop
@@ -432,7 +433,7 @@
 		)
 	   ((string= "n" answer)
 		(message "リセットを中止しました。")
-		(return-from _gitlog-reset)
+		(return-from reset)
 		)
 	   )
 	  )
@@ -449,7 +450,7 @@
 		)
 	   ((string= "q" answer)
 		(message "リセットを中止しました。")
-		(return-from _gitlog-reset)
+		(return-from reset)
 		)
 	   ((string= "?" answer)
 		(msgbox "s - soft\nh - hard\nq - quit")
@@ -457,20 +458,20 @@
 	   )
 	  )
 	(call-process (format nil "~A reset --~A ~A"
-						  *gitlog-git-executable-path* mode reflog-pointer))
+						  *git-executable-path* mode reflog-pointer))
 	)
   (message "reset has done.")
   )
 
-(defun _gitlog-retroversion ()
+(defun retroversion ()
   "@brief	特定のリビジョンのファイルを取得する。"
   (interactive)
   (when (= 0 (length gitlog-target-file-name))
 	(msgbox "ファイル名が指定されていません。")
-	(return-from _gitlog-retroversion)
+	(return-from retroversion)
 	)
-  (let* ((object (_gitlog-current-commit))
-		 (sha1 (_gitlog-commit-object-sha1 object))
+  (let* ((object (get-cursor-commit))
+		 (sha1 (get-sha1-from-commit object))
 		 (file-name gitlog-target-file-name)
 		 answer
 		 )
@@ -487,17 +488,17 @@
 		)
 	   ((string= "n" answer)
 		(message "処理を中断しました。")
-		(return-from _gitlog-retroversion)
+		(return-from retroversion)
 		)
 	   )
 	  )
 	(call-process (format nil "\"~A\" show ~A:~A"
-						  *gitlog-git-executable-path* sha1
+						  *git-executable-path* sha1
 						  gitlog-target-file-name) :output file-name)
 	)
   )
 
-(defun gitlog-mode (&optional log-file-name)
+(defun git-util-mode (&optional log-file-name)
   "@param log-file-name	ログファイル名。フルパスである必要がある。
 "
   (interactive)
@@ -532,13 +533,13 @@
 	(switch-to-buffer-other-window "Git description")
 	(setf description-window (selected-window))
 	(setup-temp-buffer (selected-buffer))
-	(_gitlog-setup-mode-line)
+	(setup-mode-line)
 
 	; 変更ファイルリストペイン
 	(switch-to-buffer-other-window "Modified files")
 	(setf modfiles-window (selected-window))
 	(setup-temp-buffer (selected-buffer))
-	(_gitlog-setup-mode-line)
+	(setup-mode-line)
 	(setf buffer-read-only t)
 
 	; ログペイン初期化
@@ -558,8 +559,8 @@
 	(set-local-window-flags (selected-buffer)
 							*window-flag-just-inverse* t)
 	(set-buffer-fold-width nil)
-	(_gitlog-setup-mode-line)
-	(use-keymap (_gitlog-make-general-keymap))
+	(setup-mode-line)
+	(use-keymap (make-general-keymap))
 	(make-local-variable 'gitlog-exec-directory)
 	; diff やチェックアウトで使用する。
 	(make-local-variable 'gitlog-target-file-name)
@@ -569,14 +570,14 @@
 
 	(let (file)
 	  (with-open-file (file log-file-name :encoding :text)
-		(setf *gitlog-mode* (read-line file nil nil))
+		(setf *mode* (read-line file nil nil))
 		(setf gitlog-exec-directory (read-line file nil nil))
 		(cond
-		 ((string= "log" *gitlog-mode*)
+		 ((string= "log" *mode*)
 		  (setf gitlog-target-file-name (read-line file nil nil))
 		  )
 		 )
-		(_gitlog-setup-manual-pane)
+		(setup-manual-pane)
 		; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 		; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
 		; 変換するようにした。
@@ -587,23 +588,23 @@
 		  )
 		(let ((mode-stuff-containers
 			   '(("log" .
-				  (_gitlog-define-log-mode-keymap))
+				  (define-log-mode-keymap))
 				 ("reflog" .
-				  (_gitlog-define-reflog-mode-keymap))
+				  (define-reflog-mode-keymap))
 				 )
 			   mode-stuffs keymap-definer)
 			  )
 		  (setf mode-stuffs
-				(cdr (assoc *gitlog-mode* mode-stuff-containers :test 'string=)))
+				(cdr (assoc *mode* mode-stuff-containers :test 'string=)))
 		  (setf keymap-definer (nth 0 mode-stuffs))
 		  (funcall keymap-definer (local-keymap (selected-buffer)))
-		  (setf *gitlog-commit-objects* (_gitlog-parse-log file))
+		  (setf *commits* (parse-log file))
 		  )
 		)
 	  )
-	(_gitlog-update-logpane *gitlog-commit-objects*)
-	(_gitlog-detail-open)
-	(_gitlog-update-modfiles-pane)
+	(update-log-pane *commits*)
+	(update-description)
+	(update-modfiles-pane)
 	)
   )
 
@@ -619,7 +620,7 @@
 				(return-from top "Specified file is not exist")
 				)
 			  (pop si:*command-line-args*)
-			  (gitlog-mode log-file-name)
+			  (git-util-mode log-file-name)
 			  )
 			nil
 			)
