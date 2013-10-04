@@ -124,13 +124,18 @@
 @param log-file	ログファイルのストリーム
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
-  (let ((objects (list))
-		)
+  (let (line skip-read
+			 (objects (list))
+			 )
 	(loop
-	  (let (line splited description file-status
-				 (files-status (list))
-				 )
-		(setf line (read-line log-file nil nil))
+	  (let (splited description file-status
+					(files-status (list))
+					)
+		(if skip-read
+			(setf skip-read nil)
+		  ; else
+		  (setf line (read-line log-file nil nil))
+		  )
 		(when (not line)
 		  (return)
 		  )
@@ -146,9 +151,17 @@
 		; 変更ファイル情報解析
 		(loop
 		  (setf line (read-line log-file nil nil))
-		  (when (= 0 (length line))
+		  (cond
+		   ((= 0 (length line))
 			(return)
 			)
+		   ; 変更ファイルが無いと情報行を読み込んでしまうため、
+		   ; その時は次のループの冒頭での情報行の読み込みをスキップする。
+		   ((string-looking-at "^[0-9a-z]+|" line)
+			(setf skip-read t)
+			(return)
+			)
+		   )
 		  (setf file-status (split-string line "	"))
 		  (push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
 		  )
