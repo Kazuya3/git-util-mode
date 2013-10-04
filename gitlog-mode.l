@@ -399,7 +399,11 @@
 
 (defun _gitlog-checkout()
   (interactive)
-  "カーソルがある行でチェックアウトする。"
+  "
+@brief	カーソルがある行でチェックアウトする。　
+ファイル名を指定していなくても
+（ gitlog-target-file-name が nil でも）使用できる。
+その場合は管理対象全てがチェックアウト対象となる。"
   (let* ((object (_gitlog-current-commit))
 		 (sha1 (_gitlog-commit-object-sha1 object))
 		 )
