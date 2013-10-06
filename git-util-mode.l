@@ -54,7 +54,6 @@
 (defvar *modfile-window* nil)
 
 
-
 ; -----------------------------------------------------------------------------
 ; 関数定義
 ; -----------------------------------------------------------------------------
@@ -143,6 +142,7 @@
   (switch-to-buffer "Git operation")
   (setup-temp-buffer (selected-buffer))
   (setup-mode-line)
+  (define-general-keymap (local-keymap))
 
   ; ログウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git log")
@@ -155,12 +155,14 @@
   (setf *description-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
   (setup-mode-line)
+  (define-general-keymap (local-keymap))
 
   ; 変更ファイルリストバッファ・ウィンドウ作成
   (switch-to-buffer-other-window "Modified files")
   (setf *modfiles-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
   (setup-mode-line)
+  (define-general-keymap (local-keymap))
   )
 
 (defun parse-log (log-file-path)
@@ -262,21 +264,39 @@
 	)
   )
 
-(defun setup-manual-pane ()
+(defun define-general-keymap (keymap)
+  "各バッファ共通のキーバインド定義"
+  (define-key keymap '(#\C-x #\o) 'forward-window)
+  (define-key keymap '(#\C-x #\p) 'back-window)
+  )
+
+(defun update-manual-pane ()
   "マニュアルペイン設定"
-  (save-window-excursion
-	(set-window *manual-window*)
-	(insert-file (merge-pathnames "gitlog/general.txt" *etc-path*))
-	(goto-max)
-	(cond
-	 ((string= "log" *mode*)
-	  (insert-file (merge-pathnames "gitlog/log-mode.txt" *etc-path*))
+  (let ((active-window (selected-window))
+		)
+	(save-window-excursion
+	  (set-window *manual-window*)
+	  (setf buffer-read-only nil)
+	  (erase-buffer (selected-buffer))
+	  (cond
+	   ((eq *log-window* active-window)
+		(insert-file (merge-pathnames "gitlog/general.txt" *etc-path*))
+		(goto-max)
+		(cond
+		 ((string= "log" *mode*)
+		  (insert-file (merge-pathnames "gitlog/log-mode.txt" *etc-path*))
+		  )
+		 ((string= "reflog" *mode*)
+		  (insert-file (merge-pathnames "gitlog/reflog-mode.txt" *etc-path*))
+		  )
+		 )
+		)
+	   ((eq *modfile-window* active-window)
+		(insert-file (merge-pathnames "gitlog/modfile-operation.txt" *etc-path*))
+		)
+	   )
+	  (setf buffer-read-only t)
 	  )
-	 ((string= "reflog" *mode*)
-	  (insert-file (merge-pathnames "gitlog/reflog-mode.txt" *etc-path*))
-	  )
-	 )
-	(setf buffer-read-only t)
 	)
   )
 
@@ -550,6 +570,22 @@
 	)
   )
 
+(defun forward-window ()
+  "
+@brief	操作法ペインを適切に切り替えるための other-window のラッパ。"
+  (interactive)
+  (other-window)
+  (update-manual-pane)
+  )
+
+(defun back-window ()
+  "
+@brief	操作法ペインを適切に切り替えるための move-previous-window のラッパ。"
+  (interactive)
+  (move-previous-window)
+  (update-manual-pane)
+  )
+
 (defun git-util-mode (&optional log-file-name)
   "@param log-file-name	ログファイル名。フルパスである必要がある。
 "
@@ -579,8 +615,9 @@
 						  *window-flag-just-inverse* t)
   (set-buffer-fold-width nil)
 
-  (setup-manual-pane)
+  (update-manual-pane)
   (use-keymap (make-log-buffer-keymap))
+  (define-general-keymap (local-keymap))
   (update-log-pane *commits*)
   (update-description)
   (update-modfiles-pane)
