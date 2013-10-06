@@ -121,62 +121,80 @@
   )
 
 
-(defun parse-log (log-file)
+(defun parse-log (log-file-path)
   "
 @brief	log の結果をパースする。
 @param log-file	ログファイルのストリーム
 @return	log-file をパースして得たコミットオブジェクトのリスト
 "
-  (let (line skip-read
-			 (objects (list))
-			 )
-	(loop
-	  (let (splited description file-status
-					(files-status (list))
-					)
-		(if skip-read
-			(setf skip-read nil)
-		  ; else
-		  (setf line (read-line log-file nil nil))
-		  )
-		(when (not line)
-		  (return)
-		  )
-		(setf splited (split-string line "|"))
-		; body 解析
-		(loop
-		  (setf line (read-line log-file nil nil))
-		  (if (string-match "^`$" line)
-			  (return)
-			)
-		  (setf description (concat description line "\n"))
-		  )
-		; 変更ファイル情報解析
-		(loop
-		  (setf line (read-line log-file nil nil))
-		  (cond
-		   ((= 0 (length line))
-			(return)
-			)
-		   ; 変更ファイルが無いと情報行を読み込んでしまうため、
-		   ; その時は次のループの冒頭での情報行の読み込みをスキップする。
-		   ((string-looking-at "^[0-9a-z]+|" line)
-			(setf skip-read t)
-			(return)
-			)
-		   )
-		  (setf file-status (split-string line "	"))
-		  (push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
-		  )
-		(push (make-commit
-			   :splited-info splited
-			   :description description
-			   :files-status files-status
-			   )
-			  objects)
-		)
+  (with-open-file (file log-file-path :encoding :text)
+	(setf *mode* (read-line file nil nil))
+	(setf *gitlog-exec-directory* (read-line file nil nil))
+	(cond
+	 ((string= "log" *mode*)
+	  (setf *gitlog-target-file-name* (read-line file nil nil))
 	  )
-	(reverse objects)
+	 )
+	; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
+	; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
+	; 変換するようにした。
+	(when (char= #\/ (char *gitlog-exec-directory* 0))
+	  (setf *gitlog-exec-directory* (concat (substring *gitlog-exec-directory* 1 2)
+											":"
+											(substring *gitlog-exec-directory* 2)))
+	  )
+	
+	(let (line skip-read
+			   (objects (list))
+			   )
+	  (loop
+		(let (splited description file-status
+					  (files-status (list))
+					  )
+		  (if skip-read
+			  (setf skip-read nil)
+			; else
+			(setf line (read-line file nil nil))
+			)
+		  (when (not line)
+			(return)
+			)
+		  (setf splited (split-string line "|"))
+		  ; body 解析
+		  (loop
+			(setf line (read-line file nil nil))
+			(if (string-match "^`$" line)
+				(return)
+			  )
+			(setf description (concat description line "\n"))
+			)
+		  ; 変更ファイル情報解析
+		  (loop
+			(setf line (read-line file nil nil))
+			(cond
+			 ((= 0 (length line))
+			  (return)
+			  )
+			 ; 変更ファイルが無いと情報行を読み込んでしまうため、
+			 ; その時は次のループの冒頭での情報行の読み込みをスキップする。
+			 ((string-looking-at "^[0-9a-z]+|" line)
+			  (setf skip-read t)
+			  (return)
+			  )
+			 )
+			(setf file-status (split-string line "	"))
+			(push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
+			)
+		  (push (make-commit
+				 :splited-info splited
+				 :description description
+				 :files-status files-status
+				 )
+				objects)
+		  )
+		)
+	  (setf *commits* (reverse objects))
+	  )
 	)
   )
 
@@ -558,27 +576,8 @@
 	; log-file-name が sjis じゃない場合に、sjis に変換する。
 	(convert-char-code log-file-name *encoding-sjis*)
 
-	(let (file)
-	  (with-open-file (file log-file-name :encoding :text)
-		(setf *mode* (read-line file nil nil))
-		(setf *gitlog-exec-directory* (read-line file nil nil))
-		(cond
-		 ((string= "log" *mode*)
-		  (setf *gitlog-target-file-name* (read-line file nil nil))
-		  )
-		 )
-		(setup-manual-pane)
-		; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
-		; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
-		; 変換するようにした。
-		(when (char= #\/ (char *gitlog-exec-directory* 0))
-		  (setf *gitlog-exec-directory* (concat (substring *gitlog-exec-directory* 1 2)
-												":"
-												(substring *gitlog-exec-directory* 2)))
-		  )
-		(setf *commits* (parse-log file))
-		)
-	  )
+	(parse-log log-file-name)
+	(setup-manual-pane)
 	(use-keymap (make-log-buffer-keymap))
 	(update-log-pane *commits*)
 	(update-description)
