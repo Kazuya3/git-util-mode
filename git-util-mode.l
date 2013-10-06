@@ -48,6 +48,11 @@
 (defvar *git-executable-path* "C:/Program Files/Git/bin/git.exe")
 (defvar *gitlog-exec-directory* nil)
 (defvar *gitlog-target-file-name* nil)	; diff やチェックアウトで使用する。
+(defvar *manual-window* nil)
+(defvar *log-window* nil)
+(defvar *description-window* nil)
+(defvar *modfile-window* nil)
+
 
 
 ; -----------------------------------------------------------------------------
@@ -120,6 +125,43 @@
   (nth 5 (commit-splited-info object))
   )
 
+(defun make-window-layout ()
+  "画面レイアウトを作成・初期化する"
+  (when (find-pseudo-frame "Git")
+	(select-pseudo-frame (find-pseudo-frame "Git"))
+	(delete-pseudo-frame)
+	)
+  (new-pseudo-frame "Git")
+  (setf *manual-window* (selected-window))
+  (split-window)
+  (split-window-vertically 80)
+  (set-window (previous-window (selected-window)))
+  (split-window-vertically 80)
+
+  ; マニュアルバッファ作成
+  (set-window *manual-window*)
+  (switch-to-buffer "Git operation")
+  (setup-temp-buffer (selected-buffer))
+  (setup-mode-line)
+
+  ; ログウィンドウ・バッファ作成・初期化
+  (switch-to-buffer-other-window "Git log")
+  (setf *log-window* (selected-window))
+  (setup-temp-buffer (selected-buffer))
+  (setup-mode-line)
+
+  ; デスクリプションウィンドウ・バッファ作成・初期化
+  (switch-to-buffer-other-window "Git description")
+  (setf *description-window* (selected-window))
+  (setup-temp-buffer (selected-buffer))
+  (setup-mode-line)
+
+  ; 変更ファイルリストバッファ・ウィンドウ作成
+  (switch-to-buffer-other-window "Modified files")
+  (setf *modfiles-window* (selected-window))
+  (setup-temp-buffer (selected-buffer))
+  (setup-mode-line)
+  )
 
 (defun parse-log (log-file-path)
   "
@@ -143,7 +185,7 @@
 											":"
 											(substring *gitlog-exec-directory* 2)))
 	  )
-	
+
 	(let (line skip-read
 			   (objects (list))
 			   )
@@ -223,9 +265,7 @@
 (defun setup-manual-pane ()
   "マニュアルペイン設定"
   (save-window-excursion
-	(switch-to-buffer "Git operating")
-	(setup-temp-buffer (selected-buffer))
-	(setup-mode-line)
+	(set-window *manual-window*)
 	(insert-file (merge-pathnames "gitlog/general.txt" *etc-path*))
 	(goto-max)
 	(cond
@@ -514,75 +554,36 @@
   "@param log-file-name	ログファイル名。フルパスである必要がある。
 "
   (interactive)
-  (let ((logbuffer (selected-buffer))
-		manual-window log-window description-window modfiles-window
-		)
 
-	; 開発用にログファイルを指定したい場合は以下をコメントアウトする。
+  ; 開発用にログファイルを指定したい場合は以下をコメントアウトする。
 ;; 	(setf log-file-name "D:/myRoot/opt/xyzzy/site-lisp/siteinitlog.gitlog")
 
-	(when (find-pseudo-frame "Git")
-	  (select-pseudo-frame (find-pseudo-frame "Git"))
-	  (delete-pseudo-frame)
-	  )
-	(new-pseudo-frame "Git")
-	(setf manual-window (selected-window))
-	(split-window)
-	(split-window-vertically 80)
-	(set-window (previous-window (selected-window)))
-	(split-window-vertically 80)
+  ; log-file-name が sjis じゃない場合に、sjis に変換する。
+  (convert-char-code log-file-name *encoding-sjis*)
+  (parse-log log-file-name)
+  (make-window-layout)
 
-	; レイアウトのため、ここで操作法ペイン作成。
-	(set-window manual-window)
-	(switch-to-buffer "Git operating")
+  ; ログペイン初期化
+  (set-window *log-window*)
+  (set-local-window-flags (selected-buffer)
+						  *window-flag-line-number* nil)
+  (set-local-window-flags (selected-buffer)
+						  *window-flag-newline* nil)
+  (set-local-window-flags (selected-buffer)
+						  *window-flag-eof* nil)
+  (set-local-window-flags (selected-buffer)
+						  *window-flag-cursor-line* t)
+  (set-local-window-flags (selected-buffer)
+						  *window-flag-ruler* nil)
+  (set-local-window-flags (selected-buffer)
+						  *window-flag-just-inverse* t)
+  (set-buffer-fold-width nil)
 
-	; ログペイン作成
-	(switch-to-buffer-other-window "Git log")
-	(setf log-window (selected-window))
-	(setup-temp-buffer (selected-buffer))
-
-	; デスクリプションペイン初期化
-	(switch-to-buffer-other-window "Git description")
-	(setf description-window (selected-window))
-	(setup-temp-buffer (selected-buffer))
-	(setup-mode-line)
-
-	; 変更ファイルリストペイン
-	(switch-to-buffer-other-window "Modified files")
-	(setf modfiles-window (selected-window))
-	(setup-temp-buffer (selected-buffer))
-	(setup-mode-line)
-	(setf buffer-read-only t)
-
-	; ログペイン初期化
-	(set-window-with-buffer-name "Git log")
-	(setup-temp-buffer (selected-buffer))
-	(setf buffer-read-only t)
-	(set-local-window-flags (selected-buffer)
-							*window-flag-line-number* nil)
-	(set-local-window-flags (selected-buffer)
-							*window-flag-newline* nil)
-	(set-local-window-flags (selected-buffer)
-							*window-flag-eof* nil)
-	(set-local-window-flags (selected-buffer)
-							*window-flag-cursor-line* t)
-	(set-local-window-flags (selected-buffer)
-							*window-flag-ruler* nil)
-	(set-local-window-flags (selected-buffer)
-							*window-flag-just-inverse* t)
-	(set-buffer-fold-width nil)
-	(setup-mode-line)
-
-	; log-file-name が sjis じゃない場合に、sjis に変換する。
-	(convert-char-code log-file-name *encoding-sjis*)
-
-	(parse-log log-file-name)
-	(setup-manual-pane)
-	(use-keymap (make-log-buffer-keymap))
-	(update-log-pane *commits*)
-	(update-description)
-	(update-modfiles-pane)
-	)
+  (setup-manual-pane)
+  (use-keymap (make-log-buffer-keymap))
+  (update-log-pane *commits*)
+  (update-description)
+  (update-modfiles-pane)
   )
 
 ; エントリポイント
