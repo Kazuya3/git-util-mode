@@ -180,28 +180,26 @@
 	)
   )
 
-(defun make-general-keymap ()
-  "@brief	共通キーマップ作成"
+(defun make-log-buffer-keymap ()
+  "@brief	ログバッファのキーマップ作成"
   (let ((keymap (make-sparse-keymap)))
 	(define-key keymap #\SPC 'toggle-mark)
 	(define-key keymap #\n 'forward-log)
 	(define-key keymap #\C-n 'forward-log)
 	(define-key keymap #\p 'back-log)
 	(define-key keymap #\C-p 'back-log)
+	(cond
+	 ((string= "log" *mode*)
+	  (define-key keymap #\RET 'compare-commits)
+	  (define-key keymap #\c 'checkout)
+	  (define-key keymap #\s 'retroversion)
+	  )
+	 ((string= "reflog" *mode*)
+	  (define-key keymap #\r 'reset)
+	  )
+	 )
 	keymap
 	)
-  )
-
-(defun define-log-mode-keymap (keymap)
-  "@brief	log 用のキーマップ定義"
-  (define-key keymap #\RET 'compare-commits)
-  (define-key keymap #\c 'checkout)
-  (define-key keymap #\s 'retroversion)
-  )
-
-(defun define-reflog-mode-keymap (keymap)
-  "@brief	reflog 用のキーマップ定義"
-  (define-key keymap #\r 'reset)
   )
 
 (defun setup-manual-pane ()
@@ -556,7 +554,6 @@
 							*window-flag-just-inverse* t)
 	(set-buffer-fold-width nil)
 	(setup-mode-line)
-	(use-keymap (make-general-keymap))
 
 	; log-file-name が sjis じゃない場合に、sjis に変換する。
 	(convert-char-code log-file-name *encoding-sjis*)
@@ -576,25 +573,13 @@
 		; 変換するようにした。
 		(when (char= #\/ (char *gitlog-exec-directory* 0))
 		  (setf *gitlog-exec-directory* (concat (substring *gitlog-exec-directory* 1 2)
-											  ":"
-											  (substring *gitlog-exec-directory* 2)))
+												":"
+												(substring *gitlog-exec-directory* 2)))
 		  )
-		(let ((mode-stuff-containers
-			   '(("log" .
-				  (define-log-mode-keymap))
-				 ("reflog" .
-				  (define-reflog-mode-keymap))
-				 )
-			   mode-stuffs keymap-definer)
-			  )
-		  (setf mode-stuffs
-				(cdr (assoc *mode* mode-stuff-containers :test 'string=)))
-		  (setf keymap-definer (nth 0 mode-stuffs))
-		  (funcall keymap-definer (local-keymap (selected-buffer)))
-		  (setf *commits* (parse-log file))
-		  )
+		(setf *commits* (parse-log file))
 		)
 	  )
+	(use-keymap (make-log-buffer-keymap))
 	(update-log-pane *commits*)
 	(update-description)
 	(update-modfiles-pane)
