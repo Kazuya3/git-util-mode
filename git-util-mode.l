@@ -642,6 +642,7 @@ checkout で過去の状態に戻すと reflog に記録される。
   (parse-log log-file-name)
 
   (make-window-layout)
+  (set-window *log-window*)
   (update-manual-pane)
   (update-log-pane *commits*)
   (update-description)
