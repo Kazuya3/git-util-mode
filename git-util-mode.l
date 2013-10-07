@@ -174,9 +174,9 @@
 
   ; 変更ファイルリストバッファ・ウィンドウ作成
   (switch-to-buffer-other-window "Modified files")
-  (setf *modfiles-window* (selected-window))
+  (setf *modfile-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
-  (init-window *modfiles-window*)
+  (init-window *modfile-window*)
   (define-modfile-buffer-key (local-keymap))
   )
 
