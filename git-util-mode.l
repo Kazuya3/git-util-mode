@@ -607,9 +607,7 @@ checkout で過去の状態に戻すと reflog に記録される。
 	  (return-from retroversion-at-modfile-buffer)
 	  )
 	(setf file-name (cadr (nth cursor-line (commit-files-status commit))))
-
-	;; FIXME
-	(msgbox file-name)
+	(retroversion file-name)
 	)
   )
 
