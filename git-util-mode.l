@@ -536,7 +536,12 @@
   )
 
 (defun retroversion ()
-  "@brief	特定のリビジョンのファイルを取得する。"
+  "
+@brief	*target-file-name* が指すファイルの、特定のリビジョンの状態を取得する。
+checkout で過去の状態に戻すと reflog に記録される。
+ファイル名を改名しなければ reflog を汚さずに過去の状態が取得できる。
+ただし同じ名前のファイルの内容が上書きされるので注意。
+"
   (interactive)
   (when (= 0 (length *target-file-name*))
 	(msgbox "ファイル名が指定されていません。")
