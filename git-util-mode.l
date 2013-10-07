@@ -199,8 +199,8 @@
 	; 変換するようにした。
 	(when (char= #\/ (char *exec-directory* 0))
 	  (setf *exec-directory* (concat (substring *exec-directory* 1 2)
-											":"
-											(substring *exec-directory* 2)))
+									 ":"
+									 (substring *exec-directory* 2)))
 	  )
 
 	(let (line skip-read
