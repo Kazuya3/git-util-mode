@@ -242,7 +242,7 @@
 			  )
 			 )
 			(setf file-status (split-string line "	"))
-			(push `(,(string= "M" (car file-status)) ,(cadr file-status)) files-status)
+			(push `(,(car file-status) ,(cadr file-status)) files-status)
 			)
 		  (push (make-commit
 				 :splited-info splited
@@ -459,10 +459,27 @@
   (erase-buffer (selected-buffer))
   (let* ((object (get-cursor-commit))
 		 (files-status (commit-files-status object))
+		 state state-text
 		 )
 	(dolist (file-status files-status)
-	  (insert (format nil "~:[追加~;変更~]	~A~%"
-					  (car file-status) (cadr file-status)))
+	  (setf state (car file-status))
+	  (cond
+	   ((string= "A" state)
+		(setf state-text "追加")
+		)
+	   ((string= "M" state)
+		(setf state-text "変更")
+		)
+	   ((string= "D" state)
+		(setf state-text "削除")
+		)
+	   (t
+		(msgbox "予期せぬ状態が検出されました。[~A]" state)
+		(setf state-text "Unknown")
+		)
+	   )
+	  (insert (format nil "~A	~A~%"
+					  state-text (cadr file-status)))
 	  )
 	(delete-backward-char)
 	)
