@@ -46,8 +46,8 @@
 (defvar *mode* nil)		; 実行中のモードを表す文字列を格納する。
 (defvar *commits* nil)	; コミットオブジェクトのリスト
 (defvar *git-executable-path* "C:/Program Files/Git/bin/git.exe")
-(defvar *gitlog-exec-directory* nil)
-(defvar *gitlog-target-file-name* nil)	; diff やチェックアウトで使用する。
+(defvar *exec-directory* nil)
+(defvar *target-file-name* nil)	; diff やチェックアウトで使用する。
 (defvar *manual-window* nil)
 (defvar *log-window* nil)
 (defvar *description-window* nil)
@@ -173,19 +173,19 @@
 "
   (with-open-file (file log-file-path :encoding :text)
 	(setf *mode* (read-line file nil nil))
-	(setf *gitlog-exec-directory* (read-line file nil nil))
+	(setf *exec-directory* (read-line file nil nil))
 	(cond
 	 ((string= "log" *mode*)
-	  (setf *gitlog-target-file-name* (read-line file nil nil))
+	  (setf *target-file-name* (read-line file nil nil))
 	  )
 	 )
 	; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 	; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
 	; 変換するようにした。
-	(when (char= #\/ (char *gitlog-exec-directory* 0))
-	  (setf *gitlog-exec-directory* (concat (substring *gitlog-exec-directory* 1 2)
+	(when (char= #\/ (char *exec-directory* 0))
+	  (setf *exec-directory* (concat (substring *exec-directory* 1 2)
 											":"
-											(substring *gitlog-exec-directory* 2)))
+											(substring *exec-directory* 2)))
 	  )
 
 	(let (line skip-read
@@ -337,10 +337,10 @@
 							*git-executable-path*
 							(get-sha1-from-commit (nth 0 checkeds))
 							(get-sha1-from-commit (nth 1 checkeds))
-							*gitlog-target-file-name*)
+							*target-file-name*)
 					)
 			  (call-process command
-							:exec-directory *gitlog-exec-directory*
+							:exec-directory *exec-directory*
 							)
 			  )
 			nil
@@ -475,7 +475,7 @@
   "
 @brief	カーソルがある行でチェックアウトする。　
 ファイル名を指定していなくても
-（ *gitlog-target-file-name* が nil でも）使用できる。
+（ *target-file-name* が nil でも）使用できる。
 その場合は管理対象全てがチェックアウト対象となる。"
   (let* ((object (get-cursor-commit))
 		 (sha1 (get-sha1-from-commit object))
@@ -483,7 +483,7 @@
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
 							*git-executable-path* sha1
-							*gitlog-target-file-name*))
+							*target-file-name*))
 	  )
 	)
   )
@@ -538,13 +538,13 @@
 (defun retroversion ()
   "@brief	特定のリビジョンのファイルを取得する。"
   (interactive)
-  (when (= 0 (length *gitlog-target-file-name*))
+  (when (= 0 (length *target-file-name*))
 	(msgbox "ファイル名が指定されていません。")
 	(return-from retroversion)
 	)
   (let* ((object (get-cursor-commit))
 		 (sha1 (get-sha1-from-commit object))
-		 (file-name *gitlog-target-file-name*)
+		 (file-name *target-file-name*)
 		 answer
 		 )
 	(setf file-name (read-string "ファイル名を指定してください。>"
@@ -552,7 +552,7 @@
 	(loop
 	  (setf answer (read-string (format nil "~A のリビジョンの ~A の内容を~
 ~A というファイルに出力します。よろしいですか？ [y, n]?"
-										sha1 *gitlog-target-file-name*
+										sha1 *target-file-name*
 										file-name)))
 	  (cond
 	   ((string= "y" answer)
@@ -566,7 +566,7 @@
 	  )
 	(call-process (format nil "\"~A\" show ~A:~A"
 						  *git-executable-path* sha1
-						  *gitlog-target-file-name*) :output file-name)
+						  *target-file-name*) :output file-name)
 	)
   )
 
