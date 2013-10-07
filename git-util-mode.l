@@ -124,6 +124,24 @@
   (nth 5 (commit-splited-info object))
   )
 
+(defun init-window (window)
+  "@brief	ウィンドウの表示設定を行う。"
+  (save-window-excursion
+	(set-window window)
+	(setup-temp-buffer (selected-buffer))
+	(make-local-variable 'mode-line-format)
+	(setq mode-line-format (format nil "%b"))
+	(set-local-window-flags (selected-buffer) *window-flag-line-number* nil)
+	(set-local-window-flags (selected-buffer) *window-flag-newline* nil)
+	(set-local-window-flags (selected-buffer) *window-flag-eof* nil)
+	(set-local-window-flags (selected-buffer) *window-flag-cursor-line* t)
+	(set-local-window-flags (selected-buffer) *window-flag-ruler* nil)
+	(set-local-window-flags (selected-buffer) *window-flag-just-inverse* t)
+	(set-buffer-fold-width nil)
+	(define-general-keymap (local-keymap))
+	)
+  )
+
 (defun make-window-layout ()
   "画面レイアウトを作成・初期化する"
   (when (find-pseudo-frame "Git")
@@ -140,29 +158,26 @@
   ; マニュアルバッファ作成
   (set-window *manual-window*)
   (switch-to-buffer "Git operation")
-  (setup-temp-buffer (selected-buffer))
-  (setup-mode-line)
-  (define-general-keymap (local-keymap))
+  (init-window *manual-window*)
 
   ; ログウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git log")
   (setf *log-window* (selected-window))
-  (setup-temp-buffer (selected-buffer))
-  (setup-mode-line)
+  (use-keymap (make-log-buffer-keymap))
+  (init-window *log-window*)
 
   ; デスクリプションウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git description")
   (setf *description-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
-  (setup-mode-line)
-  (define-general-keymap (local-keymap))
+  (init-window *description-window*)
 
   ; 変更ファイルリストバッファ・ウィンドウ作成
   (switch-to-buffer-other-window "Modified files")
   (setf *modfiles-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
-  (setup-mode-line)
-  (define-general-keymap (local-keymap))
+  (init-window *modfiles-window*)
+  (define-modfile-buffer-key (local-keymap))
   )
 
 (defun parse-log (log-file-path)
@@ -254,7 +269,7 @@
 	 ((string= "log" *mode*)
 	  (define-key keymap #\RET 'compare-commits)
 	  (define-key keymap #\c 'checkout)
-	  (define-key keymap #\s 'retroversion)
+	  (define-key keymap #\s 'retroversion-at-log-buffer)
 	  )
 	 ((string= "reflog" *mode*)
 	  (define-key keymap #\r 'reset)
@@ -268,6 +283,11 @@
   "各バッファ共通のキーバインド定義"
   (define-key keymap '(#\C-x #\o) 'forward-window)
   (define-key keymap '(#\C-x #\p) 'back-window)
+  )
+
+(defun define-modfile-buffer-key (keymap)
+  "@brief	変更ファイルバッファのキーバインド定義"
+  (define-key keymap #\s 'retroversion-at-modfile-buffer)
   )
 
 (defun update-manual-pane ()
@@ -444,6 +464,7 @@
 	  (insert (format nil "~:[追加~;変更~]	~A~%"
 					  (car file-status) (cadr file-status)))
 	  )
+	(delete-backward-char)
 	)
   (setf buffer-read-only t)
   (set-window-with-buffer-name "Git log")
@@ -462,12 +483,6 @@
   (interactive)
   (forward-log -1)
   (update-modfiles-pane)
-  )
-
-(defun setup-mode-line ()
-  "@brief	ウィンドウのステータス表示形式を変更。"
-  (make-local-variable 'mode-line-format)
-  (setq mode-line-format (format nil "%b"))
   )
 
 (defun checkout()
@@ -535,30 +550,29 @@
   (message "reset has done.")
   )
 
-(defun retroversion ()
+(defun retroversion (file-path)
   "
-@brief	*target-file-name* が指すファイルの、特定のリビジョンの状態を取得する。
+@brief	引数で指定したファイルの、特定のリビジョンの状態を取得する。
 checkout で過去の状態に戻すと reflog に記録される。
 ファイル名を改名しなければ reflog を汚さずに過去の状態が取得できる。
 ただし同じ名前のファイルの内容が上書きされるので注意。
 "
-  (interactive)
-  (when (= 0 (length *target-file-name*))
+  (when (= 0 (length file-path))
 	(msgbox "ファイル名が指定されていません。")
 	(return-from retroversion)
 	)
   (let* ((object (get-cursor-commit))
 		 (sha1 (get-sha1-from-commit object))
-		 (file-name *target-file-name*)
+		 (output-file-name file-path)
 		 answer
 		 )
-	(setf file-name (read-string "ファイル名を指定してください。>"
-								 :default file-name))
+	(setf output-file-name (read-string "ファイル名を指定してください。>"
+										:default output-file-name))
 	(loop
 	  (setf answer (read-string (format nil "~A のリビジョンの ~A の内容を~
 ~A というファイルに出力します。よろしいですか？ [y, n]?"
-										sha1 *target-file-name*
-										file-name)))
+										sha1 file-path
+										output-file-name)))
 	  (cond
 	   ((string= "y" answer)
 		(return)
@@ -571,7 +585,31 @@ checkout で過去の状態に戻すと reflog に記録される。
 	  )
 	(call-process (format nil "\"~A\" show ~A:~A"
 						  *git-executable-path* sha1
-						  *target-file-name*) :output file-name)
+						  file-path) :output output-file-name)
+	)
+  )
+
+(defun retroversion-at-log-buffer ()
+  "@brief	ログバッファで retroversion を使用する。"
+  (interactive)
+  (retroversion *target-file-name*)
+  )
+
+(defun retroversion-at-modfile-buffer ()
+  "@brief	変更ファイルバッファで retroversion を使用する。"
+  (interactive)
+  (let ((commit (get-cursor-commit))
+		(cursor-line (- (current-line-number) 1))
+		file-name
+		)
+	(when (=  0 (length (commit-files-status commit)))
+	  (msgbox "このリビジョンには変更されたファイルがありません。")
+	  (return-from retroversion-at-modfile-buffer)
+	  )
+	(setf file-name (cadr (nth cursor-line (commit-files-status commit))))
+
+	;; FIXME
+	(msgbox file-name)
 	)
   )
 
@@ -602,27 +640,9 @@ checkout で過去の状態に戻すと reflog に記録される。
   ; log-file-name が sjis じゃない場合に、sjis に変換する。
   (convert-char-code log-file-name *encoding-sjis*)
   (parse-log log-file-name)
+
   (make-window-layout)
-
-  ; ログペイン初期化
-  (set-window *log-window*)
-  (set-local-window-flags (selected-buffer)
-						  *window-flag-line-number* nil)
-  (set-local-window-flags (selected-buffer)
-						  *window-flag-newline* nil)
-  (set-local-window-flags (selected-buffer)
-						  *window-flag-eof* nil)
-  (set-local-window-flags (selected-buffer)
-						  *window-flag-cursor-line* t)
-  (set-local-window-flags (selected-buffer)
-						  *window-flag-ruler* nil)
-  (set-local-window-flags (selected-buffer)
-						  *window-flag-just-inverse* t)
-  (set-buffer-fold-width nil)
-
   (update-manual-pane)
-  (use-keymap (make-log-buffer-keymap))
-  (define-general-keymap (local-keymap))
   (update-log-pane *commits*)
   (update-description)
   (update-modfiles-pane)
