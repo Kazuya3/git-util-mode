@@ -516,6 +516,9 @@
 	  (call-process (format nil "~A checkout ~A ~A"
 							*git-executable-path* sha1
 							*target-file-name*))
+	  (msgbox "リセットにより、現在表示しているログが古くなりました。~
+\ngit-util-mode を終了します。")
+	  (kill-xyzzy)
 	  )
 	)
   )
@@ -564,7 +567,9 @@
 	(call-process (format nil "~A reset --~A ~A"
 						  *git-executable-path* mode reflog-pointer))
 	)
-  (message "reset has done.")
+  (msgbox "リセットにより、現在表示しているログが古くなりました。~
+\ngit-util-mode を終了します。")
+  (kill-xyzzy)
   )
 
 (defun retroversion (file-path)
