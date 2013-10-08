@@ -178,6 +178,16 @@
   (setup-temp-buffer (selected-buffer))
   (init-window *modfile-window*)
   (define-modfile-buffer-key (local-keymap))
+  (make-local-variable 'regexp-keyword-list)
+  (setf regexp-keyword-list
+		(compile-regexp-keyword-list
+		 '(
+		   ("^追加	.*" nil (:color 2))
+		   ("^変更	.*" nil (:color 0))
+		   ("^削除	.*" nil (:color 1))
+		   )
+		 )
+		)
   )
 
 (defun parse-log (log-file-path)
