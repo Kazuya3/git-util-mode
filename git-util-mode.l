@@ -275,6 +275,7 @@
 	(define-key keymap #\C-n 'forward-log)
 	(define-key keymap #\p 'back-log)
 	(define-key keymap #\C-p 'back-log)
+	(define-key keymap '(#\C-x #\r) 'rebase-interactively)
 	(cond
 	 ((string= "log" *mode*)
 	  (define-key keymap #\RET 'compare-commits)
@@ -641,6 +642,24 @@ checkout で過去の状態に戻すと reflog に記録される。
 	  )
 	(setf file-name (cadr (nth cursor-line (commit-files-status commit))))
 	(retroversion file-name)
+	)
+  )
+
+(defun rebase-interactively ()
+  "@brief	対話的リベースを行う。"
+  (interactive)
+  (let ((commit (get-cursor-commit))
+		)
+	(if (no-or-yes-p "対話的リベースを行います。よろしいですか？")
+		(progn
+		  (msgbox "リベースが実行された場合ログが変わるため、~
+git-util-mode を終了します。")
+		  (call-process (format nil "~A rebase -i ~A^" *git-executable-path*
+								(get-sha1-from-commit commit)))
+		  (kill-xyzzy)
+		  )
+	  (message "リベースを中止しました。")
+	  )
 	)
   )
 
