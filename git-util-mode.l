@@ -291,6 +291,7 @@
 
 (defun define-general-keymap (keymap)
   "各バッファ共通のキーバインド定義"
+  (define-key keymap '#\q 'user::query-kill-xyzzy)
   (define-key keymap '(#\C-x #\o) 'forward-window)
   (define-key keymap '(#\C-x #\p) 'back-window)
   )
