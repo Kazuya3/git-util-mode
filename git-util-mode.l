@@ -165,6 +165,19 @@
   (setf *log-window* (selected-window))
   (use-keymap (make-log-buffer-keymap))
   (init-window *log-window*)
+  (when (string= "reflog" *mode*)
+	(make-local-variable 'regexp-keyword-list)
+	(setf regexp-keyword-list
+		  (compile-regexp-keyword-list
+		   '(
+			 ("^.* commit: .*" nil (:color 0))
+			 ("^.* checkout: .*" nil (:color 2))
+			 ("^.* merge [^:]+: .*" nil (:color 3))
+			 ("^.* reset: .*" nil (:color 1))
+			 )
+		   )
+		  )
+	)
 
   ; デスクリプションウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git description")
