@@ -536,11 +536,12 @@
 その場合は管理対象全てがチェックアウト対象となる。"
   (let* ((commit (get-cursor-commit))
 		 (sha1 (get-sha1-from-commit commit))
+		 command
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
-	  (call-process (format nil "~A checkout ~A ~A"
-							*git-executable-path* sha1
-							*target-file-name*))
+	  (setf command (format nil "~A checkout ~A ~A"
+							*git-executable-path* sha1 *target-file-name*))
+	  (call-process command)
 	  (msgbox "リセットにより、現在表示しているログが古くなりました。~
 \ngit-util-mode を終了します。")
 	  (kill-xyzzy)
@@ -553,7 +554,7 @@
   (interactive)
   (let* ((commit (get-cursor-commit))
 		 (reflog-pointer (get-reflog-selector-from-commit commit))
-		 answer mode
+		 answer mode command
 		 )
 	(loop
 	  (setf answer (read-string
@@ -589,13 +590,14 @@
 		)
 	   )
 	  )
-	(call-process (format nil "~A reset --~A ~A"
+	(setf command (format nil "~A reset --~A ~A"
 						  *git-executable-path* mode reflog-pointer))
+	(call-process command)
 	)
   (msgbox "リセットにより、現在表示しているログが古くなりました。~
 \ngit-util-mode を終了します。")
   (kill-xyzzy)
-  )
+)
 
 (defun retroversion (file-path)
   "
@@ -611,7 +613,7 @@ checkout で過去の状態に戻すと reflog に記録される。
   (let* ((commit (get-cursor-commit))
 		 (sha1 (get-sha1-from-commit commit))
 		 (output-file-name file-path)
-		 answer
+		 answer command
 		 )
 	(setf output-file-name (read-string "ファイル名を指定してください。>"
 										:default output-file-name))
@@ -630,9 +632,9 @@ checkout で過去の状態に戻すと reflog に記録される。
 		)
 	   )
 	  )
-	(call-process (format nil "\"~A\" show ~A:~A"
-						  *git-executable-path* sha1
-						  file-path) :output output-file-name)
+	(setf command (format nil "\"~A\" show ~A:~A"
+						  *git-executable-path* sha1 file-path))
+	(call-process command :output output-file-name)
 	)
   )
 
@@ -662,13 +664,17 @@ checkout で過去の状態に戻すと reflog に記録される。
   "@brief	対話的リベースを行う。"
   (interactive)
   (let ((commit (get-cursor-commit))
+		command
 		)
 	(if (no-or-yes-p "対話的リベースを行います。よろしいですか？")
 		(progn
 		  (msgbox "リベースが実行された場合ログが変わるため、~
 git-util-mode を終了します。")
-		  (call-process (format nil "~A rebase -i ~A^" *git-executable-path*
-								(get-sha1-from-commit commit)))
+		  (setf command
+				(format nil "\"~A\" rebase -i ~A^" *git-executable-path*
+						(get-sha1-from-commit commit)))
+
+		  (call-process command)
 		  (kill-xyzzy)
 		  )
 	  (message "リベースを中止しました。")
