@@ -94,34 +94,34 @@
 ; -----------------------------------------------------------------------------
 ; 情報行から情報を取得する関数
 ; -----------------------------------------------------------------------------
-(defun make-formated-date-from-commit (object)
+(defun make-formated-date-from-commit (commit)
   "
 @brief	コミットオブジェクトからフォーマットに従った日時の文字列を取得する。
-@param object	コミットオブジェクト
+@param commit	コミットオブジェクト
 @return	フォーマットに従った日時の文字列
 "
   (make-date-string-from-unix-time
-   (parse-integer (nth 0 (commit-splited-info object))))
+   (parse-integer (nth 0 (commit-splited-info commit))))
   )
 
-(defun get-sha1-from-commit (object)
-  (nth 1 (commit-splited-info object))
+(defun get-sha1-from-commit (commit)
+  (nth 1 (commit-splited-info commit))
   )
 
-(defun get-author-from-commit (object)
-  (nth 2 (commit-splited-info object))
+(defun get-author-from-commit (commit)
+  (nth 2 (commit-splited-info commit))
   )
 
-(defun get-mail-from-commit (object)
-  (nth 3 (commit-splited-info object))
+(defun get-mail-from-commit (commit)
+  (nth 3 (commit-splited-info commit))
   )
 
-(defun get-reflog-selector-from-commit (object)
-  (nth 4 (commit-splited-info object))
+(defun get-reflog-selector-from-commit (commit)
+  (nth 4 (commit-splited-info commit))
   )
 
-(defun get-reflog-subject-from-commit (object)
-  (nth 5 (commit-splited-info object))
+(defun get-reflog-subject-from-commit (commit)
+  (nth 5 (commit-splited-info commit))
   )
 
 (defun init-window (window)
@@ -214,7 +214,7 @@
 	  )
 
 	(let (line skip-read
-			   (objects (list))
+			   (commits (list))
 			   )
 	  (loop
 		(let (splited description file-status
@@ -259,10 +259,10 @@
 				 :description description
 				 :files-status files-status
 				 )
-				objects)
+				commits)
 		  )
 		)
-	  (setf *commits* (reverse objects))
+	  (setf *commits* (reverse commits))
 	  )
 	)
   )
@@ -335,8 +335,8 @@
 (defun toggle-mark ()
   "@brief	ログペインのコミットのマークをトグルする。"
   (interactive)
-  (let ((object (get-cursor-commit)))
-	(setf (commit-checked object) (if (commit-checked object) nil t))
+  (let ((commit (get-cursor-commit)))
+	(setf (commit-checked commit) (if (commit-checked commit) nil t))
 	)
   (update-log-pane *commits*)
   )
@@ -351,9 +351,9 @@
 				  (checkeds (list))
 				  command
 				  )
-			  (dolist (object *commits*)
-				(when (commit-checked object)
-				  (push object checkeds)
+			  (dolist (commit *commits*)
+				(when (commit-checked commit)
+				  (push commit checkeds)
 				  (when (< 2 (incf checked-num))
 					(return-from top
 					  "Comparation more than three is not supported.")
@@ -389,28 +389,28 @@
   (format-date-string "%Y/%m/%d %H:%M %z" (convert-unix-time-to-utc unix-time))
   )
 
-(defun make-log-text (object)
+(defun make-log-text (commit)
   "
 @brief	logモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
-@param object	コミットオブジェクト"
+@param commit	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A~%"
-		  (commit-checked object)
-		  (make-formated-date-from-commit object)
-		  (get-author-from-commit object))
+		  (commit-checked commit)
+		  (make-formated-date-from-commit commit)
+		  (get-author-from-commit commit))
   )
 
-(defun make-reflog-text (object)
+(defun make-reflog-text (commit)
   "
 @brief	reflogモードにおいて、
 コミットオブジェクトからログペインに表示するテキストを作成する。
-@param object	コミットオブジェクト"
+@param commit	コミットオブジェクト"
   (format nil "[~:[ ~;*~]] ~A	~A	~A ~A~%"
-		  (commit-checked object)
-		  (get-reflog-selector-from-commit object)
-		  (make-formated-date-from-commit object)
-		  (get-author-from-commit object)
-		  (get-reflog-subject-from-commit object)
+		  (commit-checked commit)
+		  (get-reflog-selector-from-commit commit)
+		  (make-formated-date-from-commit commit)
+		  (get-author-from-commit commit)
+		  (get-reflog-subject-from-commit commit)
 		  )
   )
 
@@ -425,8 +425,8 @@
 		)
 	(setf text-maker (cdr (assoc *mode* text-makers :test 'string=)))
 	(erase-buffer (selected-buffer))
-	(dolist (object commit-objects)
-	  (insert (funcall text-maker object))
+	(dolist (commit commit-objects)
+	  (insert (funcall text-maker commit))
 	  )
 	(delete-backward-char)
 	(setf buffer-read-only t)
@@ -446,17 +446,17 @@
 
 (defun update-description ()
   "@brief	コミットログペイン更新。"
-  (let ((object (get-cursor-commit)))
+  (let ((commit (get-cursor-commit)))
 	(set-window-with-buffer-name "Git description")
 	(setf buffer-read-only nil)
 	(erase-buffer (selected-buffer))
 	(insert (format
 			 nil "SHA-1	~A~%Author	~A~%Mail	~A~%Date	~A~%~%~A~%"
-			 (get-sha1-from-commit object)
-			 (get-author-from-commit object)
-			 (get-mail-from-commit object)
-			 (make-formated-date-from-commit object)
-			 (commit-description object)
+			 (get-sha1-from-commit commit)
+			 (get-author-from-commit commit)
+			 (get-mail-from-commit commit)
+			 (make-formated-date-from-commit commit)
+			 (commit-description commit)
 			 )
 			)
 	)
@@ -469,8 +469,8 @@
   (set-window-with-buffer-name "Modified files")
   (setf buffer-read-only nil)
   (erase-buffer (selected-buffer))
-  (let* ((object (get-cursor-commit))
-		 (files-status (commit-files-status object))
+  (let* ((commit (get-cursor-commit))
+		 (files-status (commit-files-status commit))
 		 state state-text
 		 )
 	(dolist (file-status files-status)
@@ -521,8 +521,8 @@
 ファイル名を指定していなくても
 （ *target-file-name* が nil でも）使用できる。
 その場合は管理対象全てがチェックアウト対象となる。"
-  (let* ((object (get-cursor-commit))
-		 (sha1 (get-sha1-from-commit object))
+  (let* ((commit (get-cursor-commit))
+		 (sha1 (get-sha1-from-commit commit))
 		 )
 	(when (no-or-yes-p "チェックアウトします。よろしいですか？")
 	  (call-process (format nil "~A checkout ~A ~A"
@@ -538,8 +538,8 @@
 (defun reset ()
   "カーソルがある行が指すコミットでリセットする。"
   (interactive)
-  (let* ((object (get-cursor-commit))
-		 (reflog-pointer (get-reflog-selector-from-commit object))
+  (let* ((commit (get-cursor-commit))
+		 (reflog-pointer (get-reflog-selector-from-commit commit))
 		 answer mode
 		 )
 	(loop
@@ -595,8 +595,8 @@ checkout で過去の状態に戻すと reflog に記録される。
 	(msgbox "ファイル名が指定されていません。")
 	(return-from retroversion)
 	)
-  (let* ((object (get-cursor-commit))
-		 (sha1 (get-sha1-from-commit object))
+  (let* ((commit (get-cursor-commit))
+		 (sha1 (get-sha1-from-commit commit))
 		 (output-file-name file-path)
 		 answer
 		 )
