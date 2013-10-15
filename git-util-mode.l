@@ -46,7 +46,7 @@
 (defvar *mode* nil)		; 実行中のモードを表す文字列を格納する。
 (defvar *commits* nil)	; コミットオブジェクトのリスト
 (defvar *git-executable-path* "C:/Program Files/Git/bin/git.exe")
-(defvar *exec-directory* nil)
+(defvar *repository-root* nil)	; リポジトリのルートの絶対パス
 (defvar *target-file-name* nil)	; diff やチェックアウトで使用する。
 (defvar *manual-window* nil)
 (defvar *log-window* nil)
@@ -159,6 +159,7 @@
   (set-window *manual-window*)
   (switch-to-buffer "Git operation")
   (init-window *manual-window*)
+  (cd *repository-root*)
 
   ; ログウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git log")
@@ -178,12 +179,14 @@
 		   )
 		  )
 	)
+  (cd *repository-root*)
 
   ; デスクリプションウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git description")
   (setf *description-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
   (init-window *description-window*)
+  (cd *repository-root*)
 
   ; 変更ファイルリストバッファ・ウィンドウ作成
   (switch-to-buffer-other-window "Modified files")
@@ -201,6 +204,7 @@
 		   )
 		 )
 		)
+  (cd *repository-root*)
   )
 
 (defun parse-log (log-file-path)
@@ -211,7 +215,7 @@
 "
   (with-open-file (file log-file-path :encoding :text)
 	(setf *mode* (read-line file nil nil))
-	(setf *exec-directory* (read-line file nil nil))
+	(setf *repository-root* (read-line file nil nil))
 	(cond
 	 ((string= "log" *mode*)
 	  (setf *target-file-name* (read-line file nil nil))
@@ -220,10 +224,10 @@
 	; シェルスクリプトによるパスの出力で、Linux 形式ではなく Windows 形式で
 	; 吐き出される現象が確認されたので、Linux 形式の時のみ Windows 形式に
 	; 変換するようにした。
-	(when (char= #\/ (char *exec-directory* 0))
-	  (setf *exec-directory* (concat (substring *exec-directory* 1 2)
+	(when (char= #\/ (char *repository-root* 0))
+	  (setf *repository-root* (concat (substring *repository-root* 1 2)
 									 ":"
-									 (substring *exec-directory* 2)))
+									 (substring *repository-root* 2)))
 	  )
 
 	(let (line skip-read
@@ -293,7 +297,6 @@
 	 ((string= "log" *mode*)
 	  (define-key keymap #\RET 'compare-commits)
 	  (define-key keymap #\c 'checkout)
-	  (define-key keymap #\s 'retroversion-at-log-buffer)
 	  )
 	 ((string= "reflog" *mode*)
 	  (define-key keymap #\r 'reset)
@@ -384,9 +387,7 @@
 							(get-sha1-from-commit (nth 1 checkeds))
 							*target-file-name*)
 					)
-			  (call-process command
-							:exec-directory *exec-directory*
-							)
+			  (call-process command)
 			  )
 			nil
 			)

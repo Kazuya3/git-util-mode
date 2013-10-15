@@ -19,8 +19,8 @@ fi
 # モード識別子挿入。
 echo "log" > ${GITLOG_FILE}
 
-# カレントディレクトリを GITLOG_FILE に追記。
-pwd >> ${GITLOG_FILE}
+# リポジトリのルートの絶対パスを GITLOG_FILE に追記。
+git rev-parse --show-toplevel >> ${GITLOG_FILE}
 
 # 引数（対象ファイル）を GITLOG_FILE に追記。
 echo "$1" >> ${GITLOG_FILE}
