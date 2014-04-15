@@ -45,7 +45,7 @@
 ; -----------------------------------------------------------------------------
 (defvar *mode* nil)		; 実行中のモードを表す文字列を格納する。
 (defvar *commits* nil)	; コミットオブジェクトのリスト
-(defvar *git-executable-path* "C:/Program Files/Git/bin/git.exe")
+(defvar *git-executable-path* "C:/Program Files (x86)/Git/bin/git.exe")
 (defvar *repository-root* nil)	; リポジトリのルートの絶対パス
 (defvar *target-file-name* nil)	; diff やチェックアウトで使用する。
 (defvar *manual-window* nil)
