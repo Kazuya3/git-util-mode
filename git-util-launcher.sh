@@ -52,12 +52,36 @@ esac
 
 #------------------------------------------------------------------------------
 # ファイルの指定があるなら、そのファイルが存在するかチェックする。
-if [ $# -eq 3 ]; then
+if [ 3 -le $# ]; then
 	if [ ! -e $3 ]; then
-		echo -e "Error!\nReceived file does NOT exist."
-		exit 1
+		# ログ数の指定だけ行いたい場合、ファイルが正しく設定されていないと
+		# 終了されると困るので、ファイルが存在しない場合は
+		# null を指定しておく。　不格好なので時間に余裕ができたら
+		# 引数全てチェックするようなことを考えるかも。
+		TARGET_FILE=
+#		echo -e "Error!\nReceived file does NOT exist."
+#		exit 1
 	fi
 fi
+
+#------------------------------------------------------------------------------
+# ログ数設定
+LOG_NUM=
+expr "$4" + 1 >/dev/null 2>&1
+if [ $? -lt 2 ]; then
+	# 数が指定されていればそれを使用する。
+	LOG_NUM=-$4
+else
+	case $4 in
+		"all" )
+		;;
+	# 無指定は 20
+	* )
+		LOG_NUM=-20
+	esac
+fi
+
+	
 
 # モードをログに書き込む。
 echo $MODE > $LOG_FILE
@@ -70,13 +94,13 @@ git rev-parse --show-toplevel >> $LOG_FILE
 case "$MODE" in
 	"log" )
 	echo $TARGET_FILE >> $LOG_FILE
-	git log --name-status --pretty=format:"%at|%H|%aN|%aE|%n%B\`" \
+	git log $LOG_NUM --name-status --pretty=format:"%at|%H|%aN|%aE|%n%B\`" \
 		$TARGET_FILE >> $LOG_FILE
 	;;
 	
 	"reflog" ) 
-	git log --name-status -g --pretty=format:"%at|%H|%gN|%gE|%gD|%gs%n%B\`" \
-		>> $LOG_FILE
+	git log $LOG_NUM --name-status -g \
+		--pretty=format:"%at|%H|%gN|%gE|%gD|%gs%n%B\`" >> $LOG_FILE
 	;;
 esac
 
