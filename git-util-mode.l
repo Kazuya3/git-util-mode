@@ -159,7 +159,6 @@
   (set-window *manual-window*)
   (switch-to-buffer "Git operation")
   (init-window *manual-window*)
-  (cd *repository-root*)
 
   ; ログウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git log")
@@ -179,14 +178,12 @@
 		   )
 		  )
 	)
-  (cd *repository-root*)
 
   ; デスクリプションウィンドウ・バッファ作成・初期化
   (switch-to-buffer-other-window "Git description")
   (setf *description-window* (selected-window))
   (setup-temp-buffer (selected-buffer))
   (init-window *description-window*)
-  (cd *repository-root*)
 
   ; 変更ファイルリストバッファ・ウィンドウ作成
   (switch-to-buffer-other-window "Modified files")
@@ -204,7 +201,6 @@
 		   )
 		 )
 		)
-  (cd *repository-root*)
   )
 
 (defun parse-log (log-file-path)
@@ -226,8 +222,8 @@
 	; 変換するようにした。
 	(when (char= #\/ (char *repository-root* 0))
 	  (setf *repository-root* (concat (substring *repository-root* 1 2)
-									 ":"
-									 (substring *repository-root* 2)))
+									  ":"
+									  (substring *repository-root* 2)))
 	  )
 
 	(let (line skip-read
@@ -598,7 +594,7 @@
   (msgbox "リセットにより、現在表示しているログが古くなりました。~
 \ngit-util-mode を終了します。")
   (kill-xyzzy)
-)
+  )
 
 (defun retroversion (file-path)
   "
@@ -621,6 +617,16 @@ reflog には記録されなかった。　
 		 (output-file-name file-path)
 		 answer command
 		 )
+	;; output-file-name をカレントディレクトリを起点とした相対パスに加工する。
+	(let ((current-dir-in-repo (cwd)))
+	  (string-match *repository-root* current-dir-in-repo)
+	  (setf current-dir-in-repo
+			(substring current-dir-in-repo (+ 1 (match-end 0))))
+	  (if (string-match current-dir-in-repo output-file-name)
+		  (setf output-file-name
+				(substring output-file-name (match-end 0)))
+		)
+	  )
 	(setf output-file-name (read-string "ファイル名を指定してください。>"
 										:default output-file-name))
 	(loop
